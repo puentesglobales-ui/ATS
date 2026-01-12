@@ -27,7 +27,16 @@ class CareerCoach {
             "feedback_summary": "string (brief explanation)"
         }
         
-        Strictly evaluate keyword matching, formatting, and relevance. Be harsh appropriately.
+        Strictly evaluate keyword matching, formatting, and relevance.
+        
+        **EUROPEAN MARKET STANDARDS (CRITICAL):**
+        - Check for components typical of the European labor market (Europass style).
+        - **Photo & Personal Details:** Unlike the US, professional photos and date of birth are often expected or accepted in many EU countries (Germany, France, Spain). Do NOT penalize them unless unprofessional.
+        - **Languages:** Highly value implementation of CEFR levels (A1-C2).
+        - **Soft Skills:** European recruiters value "Social Competence" and "Mobility".
+        - **Length:** 2 pages is standard/acceptable in Europe (unlike the strict 1-page US rule).
+        
+        If the CV fails European standards (e.g., missing language levels), pass it as a "Missing Keyword" or "Feedback".
         `;
 
         try {

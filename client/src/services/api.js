@@ -3,7 +3,7 @@ import axios from 'axios';
 const getBaseUrl = () => {
     // FORCE HARDCODED URL FOR PRODUCTION TO AVOID ENV VAR ISSUES
     if (import.meta.env.PROD) {
-        return 'https://mvp-idiomas-server.onrender.com/api';
+        return import.meta.env.VITE_API_URL || 'https://ats-career-server.onrender.com/api';
     }
 
     // Localhost fallback

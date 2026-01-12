@@ -125,7 +125,7 @@ function App() {
           } />
 
           <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/ats-scanner" element={<ProtectedRoute><ATSScanner /></ProtectedRoute>} />
+          <Route path="/ats-scanner" element={<ProtectedRoute><ATSScanner session={session} /></ProtectedRoute>} />
           <Route path="/cv-editor" element={<ProtectedRoute><CVEditor /></ProtectedRoute>} />
           <Route path="/interview" element={<ProtectedRoute><InterviewSimulator /></ProtectedRoute>} />
           <Route path="/" element={<LandingPage />} />

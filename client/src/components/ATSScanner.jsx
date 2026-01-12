@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Upload, FileText, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import api from '../services/api';
 
-const ATSScanner = () => {
+const ATSScanner = ({ session }) => {
     const [file, setFile] = useState(null);
     const [jobDescription, setJobDescription] = useState('');
     const [analyzing, setAnalyzing] = useState(false);
@@ -27,6 +27,10 @@ const ATSScanner = () => {
         const formData = new FormData();
         formData.append('cv', file);
         formData.append('jobDescription', jobDescription);
+        // Pass userId so backend can save the score
+        if (session && session.user) {
+            formData.append('userId', session.user.id);
+        }
 
         try {
             const response = await api.post('/analyze-cv', formData, {

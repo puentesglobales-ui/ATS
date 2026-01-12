@@ -150,7 +150,8 @@ app.get('/api/admin/users', async (req, res) => {
   try {
     const { data, error } = await supabaseAdmin
       .from('profiles')
-      .select('id, email, goal, level, usage_count, is_premium, created_at, last_active')
+      .from('profiles')
+      .select('id, email, goal, level, usage_count, is_premium, created_at, last_active, ats_score, ats_status')
       .order('created_at', { ascending: false })
       .limit(50); // Limit to last 50 for performance
 
@@ -160,7 +161,7 @@ app.get('/api/admin/users', async (req, res) => {
     const users = data.map(u => ({
       id: u.id,
       email: u.email || 'No Email', // Supabase Auth might separate email, but profiles might have it if synced
-      progress: `Nivel ${u.level || '?'} (${u.goal || 'General'})`,
+      progress: `Score: ${u.ats_score || 0} (${u.ats_status || 'PENDING'})`,
       type: u.is_premium ? 'Premium' : 'Free',
       usage: u.usage_count,
       last_active: u.last_active ? new Date(u.last_active).toLocaleDateString() : 'N/A'
@@ -378,6 +379,20 @@ app.post('/api/analyze-cv', upload.single('cv'), async (req, res) => {
 
     // 2. AI Analysis
     const analysis = await careerCoach.analyzeCV(cvText, jobDescription);
+
+    // 3. Save to Supabase (if userId provided)
+    const userId = req.body.userId;
+    if (userId && supabaseAdmin) {
+      const status = analysis.score >= 80 ? 'APPROVED' : 'BLOCKED';
+      await supabaseAdmin
+        .from('profiles')
+        .update({
+          ats_score: analysis.score,
+          ats_status: status,
+          ats_missing_keywords: analysis.missing_keywords || []
+        })
+        .eq('id', userId);
+    }
 
     res.json(analysis);
 
