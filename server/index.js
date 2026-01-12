@@ -58,8 +58,9 @@ const openai = new OpenAI({
 
 app.use(express.urlencoded({ extended: true }));
 
-const whatsappRouter = require('./whatsapp');
-app.use('/api/whatsapp', whatsappRouter);
+// WhatsApp module removed for Career Mastery MVP
+// const whatsapp = require('./whatsapp');
+// app.use('/api/whatsapp', whatsapp);Router);
 
 app.get('/', (req, res) => {
   res.json({
