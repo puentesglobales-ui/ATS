@@ -1,8 +1,8 @@
-const AIRouter = require('./aiRouter');
+const aiRouter = require('./aiRouter');
 
 class CareerCoach {
     constructor() {
-        this.router = new AIRouter();
+        this.router = aiRouter;
     }
 
     async analyzeCV(cvText, jobDescription) {

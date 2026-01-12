@@ -1,8 +1,8 @@
-const AIRouter = require('./aiRouter');
+const aiRouter = require('./aiRouter');
 
 class InterviewCoach {
     constructor() {
-        this.router = new AIRouter();
+        this.router = aiRouter;
     }
 
     /**
