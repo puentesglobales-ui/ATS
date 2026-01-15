@@ -61,7 +61,7 @@ const LandingPage = () => {
                         className="md:hidden bg-slate-900 border-b border-white/10"
                     >
                         <div className="px-6 py-6 flex flex-col gap-6 text-lg">
-                            <a href="https://mvp-idiomas-server.onrender.com" target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:text-cyan-400 py-2 border-b border-white/5" onClick={() => setIsMenuOpen(false)}>Talkme AI (Idiomas)</a>
+                            <a href="https://www.puentesglobales.com/home/#/login" target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:text-cyan-400 py-2 border-b border-white/5" onClick={() => setIsMenuOpen(false)}>Talkme AI (Idiomas)</a>
                             <Link to="/login" className="text-cyan-400 font-bold py-2">Ingresar / Registrarse</Link>
                         </div>
                     </motion.div>
@@ -122,7 +122,7 @@ const LandingPage = () => {
                             </Link>
 
                             {/* Card 3: Talkme */}
-                            <a href="https://mvp-idiomas-server.onrender.com" target="_blank" rel="noopener noreferrer" className="group p-8 bg-slate-900 border border-slate-800 rounded-3xl hover:border-indigo-500/50 hover:bg-slate-800/80 transition-all cursor-pointer hover:shadow-[0_0_30px_rgba(99,102,241,0.1)]">
+                            <a href="https://www.puentesglobales.com/home/#/login" target="_blank" rel="noopener noreferrer" className="group p-8 bg-slate-900 border border-slate-800 rounded-3xl hover:border-indigo-500/50 hover:bg-slate-800/80 transition-all cursor-pointer hover:shadow-[0_0_30px_rgba(99,102,241,0.1)]">
                                 <div className="w-16 h-16 bg-indigo-600/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                                     <Bot className="text-indigo-400 w-8 h-8" />
                                 </div>
