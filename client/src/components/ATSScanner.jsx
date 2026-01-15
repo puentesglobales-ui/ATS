@@ -3,8 +3,12 @@ import { motion } from 'framer-motion';
 import { Upload, FileText, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import api from '../services/api';
 
+import { analyzeATS } from '../services/atsLogic';
+
 const ATSScanner = ({ session }) => {
     const [file, setFile] = useState(null);
+    const [cvText, setCvText] = useState('');
+    const [inputMode, setInputMode] = useState('pdf'); // 'pdf' or 'text'
     const [jobDescription, setJobDescription] = useState('');
     const [analyzing, setAnalyzing] = useState(false);
     const [result, setResult] = useState(null);
@@ -15,28 +19,46 @@ const ATSScanner = ({ session }) => {
     };
 
     const handleAnalyze = async () => {
-        if (!file || !jobDescription) {
-            setError('Please upload a CV and provide a Job Description.');
+        if (inputMode === 'pdf' && !file) {
+            setError('Please upload a CV PDF.');
+            return;
+        }
+        if (inputMode === 'text' && !cvText) {
+            setError('Por favor pega el texto de tu CV.');
+            return;
+        }
+        if (!jobDescription) {
+            setError('Please provide a Job Description.');
             return;
         }
 
         setAnalyzing(true);
         setError('');
-        setResult(null); // Reset previous result
-
-        const formData = new FormData();
-        formData.append('cv', file);
-        formData.append('jobDescription', jobDescription);
-        // Pass userId so backend can save the score
-        if (session && session.user) {
-            formData.append('userId', session.user.id);
-        }
+        setResult(null);
 
         try {
-            const response = await api.post('/analyze-cv', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            setResult(response.data);
+            // SIMULATION MODE (Text Input)
+            if (inputMode === 'text') {
+                // Simulate delay to feel like "AI processing"
+                await new Promise(r => setTimeout(r, 1500));
+
+                const simResult = analyzeATS(cvText, jobDescription);
+                setResult(simResult);
+            }
+            // REAL API MODE (File Upload)
+            else {
+                const formData = new FormData();
+                formData.append('cv', file);
+                formData.append('jobDescription', jobDescription);
+                if (session && session.user) {
+                    formData.append('userId', session.user.id);
+                }
+
+                const response = await api.post('/analyze-cv', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                setResult(response.data);
+            }
         } catch (err) {
             console.error(err);
             setError('Failed to analyze CV. Please try again.');
@@ -59,37 +81,64 @@ const ATSScanner = ({ session }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-6xl">
                 {/* INPUT SECTION */}
                 <div className="space-y-6">
-                    {/* CV Upload */}
+                    {/* TABS: PDF VS TEXT */}
+                    <div className="flex bg-slate-800 p-1 rounded-xl border border-slate-700">
+                        <button
+                            onClick={() => setInputMode('pdf')}
+                            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${inputMode === 'pdf' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            PDF Upload
+                        </button>
+                        <button
+                            onClick={() => setInputMode('text')}
+                            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${inputMode === 'text' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            Pegar Texto (Simulador)
+                        </button>
+                    </div>
+
+                    {/* CV Input Area */}
                     <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700">
                         <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                            <Upload className="text-blue-400" /> Sube tu CV (PDF)
+                            {inputMode === 'pdf' ? <Upload className="text-blue-400" /> : <FileText className="text-blue-400" />}
+                            {inputMode === 'pdf' ? 'Sube tu CV (PDF)' : 'Pega el contenido de tu CV'}
                         </h3>
-                        <div className="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer relative">
-                            <input
-                                type="file"
-                                accept=".pdf"
-                                onChange={handleFileChange}
-                                className="absolute inset-0 opacity-0 cursor-pointer"
+
+                        {inputMode === 'pdf' ? (
+                            <div className="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer relative">
+                                <input
+                                    type="file"
+                                    accept=".pdf"
+                                    onChange={handleFileChange}
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                />
+                                {file ? (
+                                    <div className="text-green-400 flex items-center justify-center gap-2 font-bold">
+                                        <FileText /> {file.name}
+                                    </div>
+                                ) : (
+                                    <span className="text-slate-400">Arrastra tu PDF aquí o haz clic</span>
+                                )}
+                            </div>
+                        ) : (
+                            <textarea
+                                value={cvText}
+                                onChange={(e) => setCvText(e.target.value)}
+                                placeholder="Copia y pega el texto de tu CV aquí para probar la lógica ATS..."
+                                className="bg-slate-900 w-full h-48 rounded-xl p-4 text-sm text-slate-300 border border-slate-600 focus:border-blue-500 focus:outline-none resize-none"
                             />
-                            {file ? (
-                                <div className="text-green-400 flex items-center justify-center gap-2 font-bold">
-                                    <FileText /> {file.name}
-                                </div>
-                            ) : (
-                                <span className="text-slate-400">Arrastra tu PDF aquí o haz clic</span>
-                            )}
-                        </div>
+                        )}
                     </div>
 
                     {/* Job Description */}
-                    <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 h-96 flex flex-col">
+                    <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 h-64 flex flex-col">
                         <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
                             <FileText className="text-purple-400" /> Descripción de la Vacante
                         </h3>
                         <textarea
                             value={jobDescription}
                             onChange={(e) => setJobDescription(e.target.value)}
-                            placeholder="Pega aquí la descripción del puesto..."
+                            placeholder="Pega aquí la descripción del puesto (ej: requisitos, skills)..."
                             className="bg-slate-900 w-full flex-1 rounded-xl p-4 text-sm text-slate-300 border border-slate-600 focus:border-purple-500 focus:outline-none resize-none"
                         />
                     </div>
@@ -99,7 +148,7 @@ const ATSScanner = ({ session }) => {
                         disabled={analyzing}
                         className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 transition-all transform hover:-translate-y-1 disabled:opacity-50"
                     >
-                        {analyzing ? 'Analizando con IA...' : 'AUDITAR MI CV'}
+                        {analyzing ? 'Procesando Lógica ATS...' : 'EJECUTAR SIMULACIÓN ATS'}
                     </button>
                     {error && <p className="text-red-400 text-center">{error}</p>}
                 </div>
