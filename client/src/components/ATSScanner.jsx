@@ -5,10 +5,18 @@ import api from '../services/api';
 
 import { analyzeATS } from '../services/atsLogic';
 
+import { Navigate } from 'react-router-dom';
+
 const ATSScanner = ({ session }) => {
+    // 1. STRICT GATE: Redirect to Login if no session
+    // This runs before anything else renders
+    if (!session) {
+        return <Navigate to="/login" />;
+    }
+
     const [file, setFile] = useState(null);
     const [cvText, setCvText] = useState('');
-    const [inputMode, setInputMode] = useState('pdf'); // 'pdf' or 'text'
+    const [inputMode, setInputMode] = useState('text'); // Default to text for easier testing
     const [jobDescription, setJobDescription] = useState('');
     const [analyzing, setAnalyzing] = useState(false);
     const [result, setResult] = useState(null);
@@ -23,11 +31,11 @@ const ATSScanner = ({ session }) => {
             setError('Please upload a CV PDF.');
             return;
         }
-        if (inputMode === 'text' && !cvText) {
+        if (inputMode === 'text' && !cvText.trim()) {
             setError('Por favor pega el texto de tu CV.');
             return;
         }
-        if (!jobDescription) {
+        if (!jobDescription.trim()) {
             setError('Please provide a Job Description.');
             return;
         }
@@ -42,8 +50,14 @@ const ATSScanner = ({ session }) => {
                 // Simulate delay to feel like "AI processing"
                 await new Promise(r => setTimeout(r, 1500));
 
-                const simResult = analyzeATS(cvText, jobDescription);
-                setResult(simResult);
+                // Safe execution wrapper
+                try {
+                    const simResult = analyzeATS(cvText, jobDescription);
+                    setResult(simResult);
+                } catch (logicError) {
+                    console.error("Logic Error:", logicError);
+                    setError("Error interno en el motor de análisis. Intenta con otro texto.");
+                }
             }
             // REAL API MODE (File Upload)
             else {
