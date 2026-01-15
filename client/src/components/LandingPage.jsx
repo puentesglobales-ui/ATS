@@ -38,23 +38,17 @@ const LandingPage = () => {
                         </span>
                     </Link>
 
-                    {/* Desktop Modules Link */}
+                    {/* Desktop Sales Menu */}
                     <div className="hidden md:flex items-center gap-10 text-base font-medium text-slate-300">
-                        <Link to="/ats-scanner" className="hover:text-cyan-400 transition-colors flex items-center gap-2">
-                            <FileText size={18} /> Scanner ATS
-                        </Link>
-                        <Link to="/interview" className="hover:text-cyan-400 transition-colors flex items-center gap-2">
-                            <UserCheck size={18} /> Roleplay Entrevista
-                        </Link>
-                        <Link to="/dashboard" className="hover:text-cyan-400 transition-colors flex items-center gap-2">
-                            <Bot size={18} /> Talkme AI
-                        </Link>
+                        <a href="#features" className="hover:text-cyan-400 transition-colors">Soluciones</a>
+                        <a href="#how-it-works" className="hover:text-cyan-400 transition-colors">Cómo Funciona</a>
+                        <a href="#pricing" className="hover:text-cyan-400 transition-colors">Planes</a>
                     </div>
 
                     {/* CTA Button */}
                     <div className="hidden md:flex items-center gap-4">
-                        <Link to="/login" className="px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-full font-bold hover:shadow-lg hover:shadow-cyan-500/25 transition-all text-base">
-                            Ingresar
+                        <Link to="/login" className="px-8 py-4 bg-cyan-600 hover:bg-cyan-500 rounded-full font-bold text-lg shadow-lg shadow-cyan-500/40 transition-all flex items-center gap-2">
+                            Crear Cuenta Gratis <ArrowRight size={20} />
                         </Link>
                     </div>
 
@@ -72,9 +66,8 @@ const LandingPage = () => {
                         className="md:hidden bg-slate-900 border-b border-white/10"
                     >
                         <div className="px-6 py-6 flex flex-col gap-6 text-lg">
-                            <Link to="/ats-scanner" className="text-slate-300 hover:text-cyan-400 py-2 border-b border-white/5">Scanner ATS</Link>
-                            <Link to="/interview" className="text-slate-300 hover:text-cyan-400 py-2 border-b border-white/5">Roleplay Entrevista</Link>
-                            <Link to="/dashboard" className="text-slate-300 hover:text-cyan-400 py-2 border-b border-white/5">Talkme AI</Link>
+                            <a href="#features" className="text-slate-300 hover:text-cyan-400 py-2 border-b border-white/5" onClick={() => setIsMenuOpen(false)}>Soluciones</a>
+                            <a href="#how-it-works" className="text-slate-300 hover:text-cyan-400 py-2 border-b border-white/5" onClick={() => setIsMenuOpen(false)}>Cómo Funciona</a>
                             <Link to="/login" className="text-cyan-400 font-bold py-2">Ingresar / Registrarse</Link>
                         </div>
                     </motion.div>
