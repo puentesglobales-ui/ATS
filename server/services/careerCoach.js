@@ -5,7 +5,7 @@ class CareerCoach {
         this.router = aiRouter;
     }
 
-    async analyzeCV(cvText, jobDescription) {
+    async analyzeCV(cvText, jobDescription, userTier = 'free') {
         if (!cvText || cvText.length < 50) throw new Error("CV text too short");
 
         const systemPrompt = `
@@ -27,7 +27,7 @@ class CareerCoach {
         **TASK:**
         User will provide a CV and a Job Description. 
         Analyze them ruthlessly. 
-        Calculated the match score based on the Matrix above.
+        Calculate the match score based on the Matrix above.
 
         **OUTPUT FORMAT (JSON ONLY):**
         {
@@ -76,8 +76,46 @@ class CareerCoach {
                 temperature: 0.2 // Low temp for factual analysis
             });
 
-            // Parse valid JSON
-            return JSON.parse(response.text);
+            const fullAnalysis = JSON.parse(response.text);
+
+            // --- FREEMIUM LOGIC: CENSORSHIP ---
+            if (userTier === 'free') {
+                return {
+                    score: fullAnalysis.score,
+                    match_level: fullAnalysis.match_level,
+                    summary: fullAnalysis.summary, // Hook: They see the summary
+
+                    // PARTIAL FEEDBACK (Hook)
+                    hard_skills_analysis: {
+                        score: fullAnalysis.hard_skills_analysis?.score,
+                        // Show only 2 missing keywords as teaser
+                        missing_keywords: fullAnalysis.hard_skills_analysis?.missing_keywords?.slice(0, 2) || [],
+                        total_missing: fullAnalysis.hard_skills_analysis?.missing_keywords?.length || 0,
+                        is_locked: true
+                    },
+
+                    // LOCKED SECTIONS
+                    experience_analysis: {
+                        score: fullAnalysis.experience_analysis?.score,
+                        feedback: "🔒 Upgrade to PRO to see detailed experience analysis.",
+                        is_locked: true
+                    },
+                    soft_skills_analysis: {
+                        score: fullAnalysis.soft_skills_analysis?.score,
+                        feedback: "🔒 Upgrade to PRO to see soft skills feedback.",
+                        is_locked: true
+                    },
+                    formatting_analysis: {
+                        score: fullAnalysis.formatting_analysis?.score,
+                        issues: ["🔒 Upgrade to unlock formatting audit."],
+                        is_locked: true
+                    },
+                    red_flags: fullAnalysis.red_flags?.slice(0, 1) || [], // Show 1 red flag only
+                    improvement_plan: ["🔒 Unlock the full Action Plan with PRO."]
+                };
+            }
+
+            return fullAnalysis;
 
         } catch (error) {
             console.error("CareerCoach Analysis Error:", error);

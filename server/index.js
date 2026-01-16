@@ -386,19 +386,36 @@ app.post('/api/analyze-cv', upload.single('cv'), async (req, res) => {
       finalCvText = bufCvText;
     }
 
-    // 2. AI Analysis
-    const analysis = await careerCoach.analyzeCV(finalCvText, jobDescription);
+    // 2. Fetch User Plan & AI Analysis
+    const userId = req.body.userId;
+    let userTier = 'free';
+
+    if (userId && supabaseAdmin) {
+      const { data: userProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('subscription_tier, credits_remaining')
+        .eq('id', userId)
+        .single();
+
+      if (userProfile) {
+        userTier = userProfile.subscription_tier || 'free';
+        // TODO: Enforce credit limits here later
+        // if (userTier === 'free' && userProfile.credits_remaining <= 0) ...
+      }
+    }
+
+    const analysis = await careerCoach.analyzeCV(finalCvText, jobDescription, userTier);
 
     // 3. Save to Supabase (if userId provided)
-    const userId = req.body.userId;
     if (userId && supabaseAdmin) {
       const status = analysis.score >= 80 ? 'APPROVED' : 'BLOCKED';
+      // Decrement credits logic could go here
       await supabaseAdmin
         .from('profiles')
         .update({
           ats_score: analysis.score,
           ats_status: status,
-          ats_missing_keywords: analysis.missing_keywords || []
+          ats_missing_keywords: analysis.hard_skills_analysis?.missing_keywords || []
         })
         .eq('id', userId);
     }
