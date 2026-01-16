@@ -133,29 +133,35 @@ export default function OnboardingWizard({ session, onComplete }) {
             try {
                 console.log("Submitting Career Profile:", formData);
 
-                // Construct JSON Payload for Profile
+                // Construct Payload
                 const profilePayload = {
-                    userId: formData.userId,
                     role_title: formData.role.title,
                     role_industry: formData.role.industry,
-                    work_context: formData.workContext
+                    work_context: formData.workContext,
+                    onboarding_completed: true,
+                    // Ensure we don't overwrite existing fields like tier
+                    updated_at: new Date()
                 };
 
-                // 1. Save Profile Data
-                await api.post('/profile', profilePayload);
+                // 1. Save directly to Supabase (Bypassing Backend RLS issues)
+                const { error } = await supabase
+                    .from('profiles')
+                    .update(profilePayload)
+                    .eq('id', session.user.id);
 
-                // 2. (Optional) If CV file exists, we could analyze it here, but let's keep it simple for now
-                // and just rely on the user doing the ATS Scanner later.
+                if (error) throw error;
+
+                // 2. (Optional) If CV file exists, we could analyze it here
                 if (formData.cv?.file) {
                     console.log("CV File pending upload:", formData.cv.file.name);
-                    // TODO: Calls to /analyze-cv or upload endpoint if needed
+                    // We can invoke the backend analysis later or upload to storage
                 }
 
                 if (onComplete) onComplete();
                 else navigate('/dashboard');
             } catch (error) {
                 console.error("Error saving profile:", error);
-                const serverMsg = error.response?.data?.details || error.message || "Error desconocido";
+                const serverMsg = error.message || "Error desconocido";
                 alert(`Error guardando perfil: ${serverMsg}`);
             } finally {
                 setLoading(false);

@@ -184,19 +184,67 @@ const ATSScanner = ({ session }) => {
                                 {result.summary || result.feedback_summary}
                             </div>
 
-                            {/* Missing Keywords (Hard Skills) */}
+                            {/* Missing Keywords (Hook vs Full) */}
                             {result.hard_skills_analysis?.missing_keywords?.length > 0 && (
                                 <div>
-                                    <h4 className="text-slate-400 text-sm uppercase font-bold mb-2">⛔ Keywords Faltantes (Crítico)</h4>
+                                    <h4 className="text-slate-400 text-sm uppercase font-bold mb-2">
+                                        ⛔ Keywords Faltantes {result.hard_skills_analysis.is_locked && <span className="text-xs text-orange-400 ml-2">(Vista Previa Limitada)</span>}
+                                    </h4>
                                     <div className="flex flex-wrap gap-2">
                                         {result.hard_skills_analysis.missing_keywords.map((kw, i) => (
                                             <span key={i} className="px-3 py-1 bg-red-900/20 border border-red-900/50 rounded-full text-xs text-red-300">
                                                 {kw}
                                             </span>
                                         ))}
+                                        {result.hard_skills_analysis.is_locked && (
+                                            <span className="px-3 py-1 bg-slate-800 border border-slate-700/50 rounded-full text-xs text-slate-500 italic flex items-center gap-1">
+                                                <AlertTriangle size={10} /> +{result.hard_skills_analysis.total_missing - 2} ocultas
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             )}
+
+                            {/* LOCKED SECTION: EXPERIENCE */}
+                            <div className="relative group">
+                                <h4 className="text-slate-400 text-sm uppercase font-bold mb-2">Análisis de Experiencia</h4>
+                                {result.experience_analysis?.is_locked ? (
+                                    <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-700/50 relative overflow-hidden">
+                                        <div className="absolute inset-0 backdrop-blur-sm bg-black/40 flex flex-col items-center justify-center z-10">
+                                            <div className="bg-slate-900 p-2 rounded-full mb-2 shadow-xl border border-blue-500/30">
+                                                <AlertTriangle className="text-blue-400" />
+                                            </div>
+                                            <p className="text-sm font-bold text-white mb-2">Análisis Detallado Bloqueado</p>
+                                            <button className="bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold px-4 py-2 rounded-lg text-xs hover:scale-105 transition-transform">
+                                                DESBLOQUEAR PREMIUM
+                                            </button>
+                                        </div>
+                                        {/* Fake Content for Blur Effect */}
+                                        <p className="text-slate-600 blur-sm">
+                                            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore...
+                                            Impacto no cuantificado en roles anteriores... falta uso de métricas claras.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="bg-slate-900 p-4 rounded-xl text-sm text-slate-300 border border-slate-700">
+                                        {result.experience_analysis?.feedback}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* LOCKED SECTION: SOFT SKILLS */}
+                            <div className="relative">
+                                <h4 className="text-slate-400 text-sm uppercase font-bold mb-2">Soft Skills & Cultura</h4>
+                                {result.soft_skills_analysis?.is_locked ? (
+                                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 border-dashed text-center">
+                                        <p className="text-xs text-slate-500 italic flex items-center justify-center gap-2">
+                                            <AlertTriangle size={12} /> Disponible en versión PRO
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-slate-300">{result.soft_skills_analysis?.feedback}</p>
+                                )}
+                            </div>
 
                             {/* Red Flags / Issues */}
                             {(result.red_flags?.length > 0) && (
@@ -208,11 +256,14 @@ const ATSScanner = ({ session }) => {
                                                 <XCircle size={16} className="mt-0.5 min-w-[16px]" /> {err}
                                             </li>
                                         ))}
+                                        {result.experience_analysis?.is_locked && (
+                                            <li className="text-xs text-slate-500 italic pl-6">... y otros riesgos detectados (Bloqueado)</li>
+                                        )}
                                     </ul>
                                 </div>
                             )}
 
-                            {/* Formatting Issues */}
+                            {/* Formatting Issues (Locked logic if needed, but usually open? Let's check backend) */}
                             {result.formatting_analysis?.issues?.length > 0 && (
                                 <div>
                                     <h4 className="text-slate-400 text-sm uppercase font-bold mb-2">⚠️ Formato</h4>
