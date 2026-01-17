@@ -29,6 +29,22 @@ function App() {
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      // CHECK DEMO MODE (Bypass)
+      const demoMode = localStorage.getItem('demo_mode') === 'true';
+      if (demoMode) {
+        console.warn("DEMO MODE ACTIVE: Using Mock Session");
+        const mockSession = {
+          user: {
+            id: 'demo-admin-id',
+            email: 'admin@demo.com',
+            user_metadata: { is_student: false, payment_completed: true, role: 'admin' }
+          }
+        };
+        setSession(mockSession);
+        setLoading(false);
+        return;
+      }
+
       setSession(session);
       if (session) checkProfile(session.user.id);
       else setLoading(false);
@@ -36,9 +52,13 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) checkProfile(session.user.id);
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      // If demo mode active, ignore supabase updates (unless it's a real login attempt overwriting it)
+      const demoMode = localStorage.getItem('demo_mode') === 'true';
+      if (demoMode && !newSession) return; // Keep demo session if supabase says null
+
+      setSession(newSession);
+      if (newSession) checkProfile(newSession.user.id);
     });
 
     return () => subscription.unsubscribe();
