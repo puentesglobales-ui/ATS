@@ -191,7 +191,7 @@ export default function OnboardingWizard({ session, onComplete }) {
 
                 // FINAL FALLBACK: If everything fails, just let them in.
                 // This ensures the user can ALWAYS reach the new ATS logic even if the DB is broken.
-                alert("Aviso: Conexión a Base de Datos inestable. Entrando en modo Offline/Demo.");
+                console.warn("Aviso: Conexión a Base de Datos inestable. Entrando en modo Offline/Demo.");
                 if (onComplete) onComplete();
                 else navigate('/ats-scanner');
 
