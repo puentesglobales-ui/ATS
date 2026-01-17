@@ -16,51 +16,8 @@ import {
 import api from '../services/api'; // Use centralized API service
 
 const AdminDashboard = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [activeTab, setActiveTab] = useState('expenses'); // Default to expenses for visibility
-
-    const handleLogin = (e) => {
-        e.preventDefault();
-        if (password === 'Lore2027$') {
-            setIsAuthenticated(true);
-            setError('');
-        } else {
-            setError('Contraseña incorrecta');
-        }
-    };
-
-    if (!isAuthenticated) {
-        return (
-            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-                <form onSubmit={handleLogin} className="bg-slate-800 p-8 rounded-2xl border border-slate-700 w-full max-w-md shadow-2xl">
-                    <div className="flex justify-center mb-6">
-                        <div className="p-4 bg-slate-700 rounded-full">
-                            <Lock className="w-8 h-8 text-blue-400" />
-                        </div>
-                    </div>
-                    <h2 className="text-2xl font-bold text-white text-center mb-6">Acceso Administrativo</h2>
-                    <div className="mb-6">
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Contraseña Maestra"
-                            className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                        />
-                        {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
-                    </div>
-                    <button
-                        type="submit"
-                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-colors"
-                    >
-                        Entrar al Panel
-                    </button>
-                </form>
-            </div>
-        );
-    }
+    // BYPASS AUTH: User requested open admin access
+    const [activeTab, setActiveTab] = useState('expenses');
 
     return (
         <div className="min-h-screen bg-slate-900 text-white flex">
