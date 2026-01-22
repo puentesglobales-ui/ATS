@@ -11,7 +11,8 @@ import {
     Plus,
     Lock,
     Zap,
-    TrendingDown
+    TrendingDown,
+    MessageCircle
 } from 'lucide-react';
 import api from '../services/api'; // Use centralized API service
 
@@ -500,7 +501,71 @@ const SettingsSection = () => {
                     Variable Actual: {config.force_provider.toUpperCase()}
                 </div>
             </div>
+
+            {/* NEW: Web Chat Config */}
+            <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6 max-w-2xl mt-6">
+                <h3 className="text-xl font-semibold mb-4 text-white flex items-center gap-2">
+                    <MessageCircle className="text-green-400" /> Widget de Chat Web (Cooper)
+                </h3>
+                <p className="text-slate-400 mb-6 text-sm">
+                    Controla si la burbuja de chat aparece en tu sitio web público.
+                </p>
+
+                <ChatParams />
+            </div>
         </motion.div>
+    );
+};
+
+const ChatParams = () => {
+    const [enabled, setEnabled] = useState(false);
+    const [loading, setLoading] = useState(true);
+    // Direct URL to WhatsApp Server (CORS must be enabled there, which it is)
+    const WA_SERVER = 'https://crmwhatsapp-xari.onrender.com/api/chat/status';
+
+    useEffect(() => {
+        // Fetch status
+        fetch(WA_SERVER)
+            .then(res => res.json())
+            .then(data => {
+                setEnabled(data.enabled);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Failed to fetch chat status", err);
+                setLoading(false);
+            });
+    }, []);
+
+    const toggleChat = (newState) => {
+        setLoading(true);
+        fetch(WA_SERVER, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: newState })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) setEnabled(data.enabled);
+            })
+            .catch(alert)
+            .finally(() => setLoading(false));
+    };
+
+    if (loading) return <div className="text-slate-500">Conectando con servidor de chat...</div>;
+
+    return (
+        <div className="flex items-center gap-4">
+            <div className={`w-16 h-8 rounded-full p-1 transition-colors cursor-pointer ${enabled ? 'bg-green-600' : 'bg-slate-700'}`} onClick={() => toggleChat(!enabled)}>
+                <motion.div
+                    className="w-6 h-6 bg-white rounded-full shadow-md"
+                    animate={{ x: enabled ? 32 : 0 }}
+                />
+            </div>
+            <span className={`font-bold ${enabled ? 'text-green-400' : 'text-slate-500'}`}>
+                {enabled ? 'ACTIVO (Visible)' : 'DESACTIVADO (Oculto)'}
+            </span>
+        </div>
     );
 };
 

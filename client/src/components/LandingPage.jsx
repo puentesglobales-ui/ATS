@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import WhatsAppWidget from './WhatsAppWidget';
 import {
     ArrowRight, Globe, MessageCircle, Calendar, Briefcase,
     CheckCircle, Mic, Star, Menu, X, FileText, UserCheck, Bot
@@ -201,6 +202,7 @@ const LandingPage = () => {
                     <p>&copy; 2026 Puentes Globales. Todos los derechos reservados.</p>
                 </div>
             </footer>
+            <WhatsAppWidget />
         </div>
     );
 };
