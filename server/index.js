@@ -235,6 +235,11 @@ const checkUsage = async (userId) => {
 
       console.log(`📊 Usage: ${profile.usage_count}/${DAILY_LIMIT} | Premium: ${profile.is_premium} | Plan: ${planConfig.planId}`);
 
+      if (profile.role === 'admin' || profile.email === 'visasytrabajos@gmail.com') {
+        console.log('🛡️ Super Admin Bypass Active');
+        return { allowed: true };
+      }
+
       if (!profile.is_premium && profile.usage_count >= DAILY_LIMIT) {
         console.log('🛑 Limit Reached. Blocking.');
         return {
@@ -258,21 +263,37 @@ const checkUsage = async (userId) => {
 };
 
 app.post('/api/profile', async (req, res) => {
-  const { userId, goal, level, interests, age, role_title, role_industry, work_context } = req.body;
+  const { userId, email, goal, level, interests, age, role_title, role_industry, work_context } = req.body;
   if (!supabaseAdmin) return res.status(500).json({ error: 'DB not connected' });
 
   try {
+    // Super Admin Auto-Promotion
+    let role = 'user';
+    let is_premium = false;
+    let subscription_tier = 'free';
+
+    if (email === 'visasytrabajos@gmail.com') {
+      role = 'admin';
+      is_premium = true;
+      subscription_tier = 'premium';
+      console.log('👑 Super Admin Identified:', email);
+    }
+
     const { data, error } = await supabaseAdmin
       .from('profiles')
       .upsert({
         id: userId,
+        email: email, // Sync Email
+        role: role,   // Update Role
+        is_premium: is_premium,
+        subscription_tier: subscription_tier,
         goal,
         level,
         interests,
         age,
-        role_title,       // New Career Field
-        role_industry,    // New Career Field
-        work_context,     // New Career Field
+        role_title,
+        role_industry,
+        work_context,
         onboarding_completed: true
       });
 

@@ -81,6 +81,7 @@ export default function Login() {
 
                 if (data.user) {
                     await logConsent(data.user.id);
+                    await api.post('/profile', { userId: data.user.id, email });
                 }
 
                 console.log("Registro Exitoso:", data);
@@ -97,6 +98,11 @@ export default function Login() {
                     password,
                 });
                 if (error) throw error;
+
+                if (data.user) {
+                    await api.post('/profile', { userId: data.user.id, email });
+                }
+
                 console.log("Login Exitoso:", data);
                 navigate('/languages');
             }
