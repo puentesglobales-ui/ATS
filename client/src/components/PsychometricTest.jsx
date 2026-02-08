@@ -17,7 +17,7 @@ const STAGES = {
 };
 
 // --- SUB-COMPONENT FOR QUESTIONS (Fixes Conditional Hook Error) ---
-const QuestionBlock = ({ questions, prefix, onAnswer, onComplete }) => {
+const QuestionBlock = ({ questions, prefix, onAnswer, onComplete, instruction }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
 
     const handleLocalAnswer = (val) => {
@@ -55,6 +55,11 @@ const QuestionBlock = ({ questions, prefix, onAnswer, onComplete }) => {
                     exit={{ opacity: 0, x: -20 }}
                     className="bg-slate-800 p-8 rounded-2xl shadow-xl text-center"
                 >
+                    {instruction && (
+                        <p className="text-cyan-400 font-bold mb-4 uppercase tracking-widest text-sm">
+                            {instruction}
+                        </p>
+                    )}
                     <h2 className="text-2xl font-bold mb-8 text-white">{q.text}</h2>
                     <div className="flex justify-center gap-4 flex-wrap">
                         {q.scale === 3 ? (
@@ -196,6 +201,7 @@ const PsychometricTest = () => {
                 <QuestionBlock
                     questions={PSYCHOMETRIC_QUESTIONS.dass21}
                     prefix="dass"
+                    instruction="Durante la última semana:"
                     onAnswer={handleAnswerUpdate}
                     onComplete={() => setStage(STAGES.TEST_FLOW)}
                 />
@@ -205,6 +211,7 @@ const PsychometricTest = () => {
                 <QuestionBlock
                     questions={PSYCHOMETRIC_QUESTIONS.flow}
                     prefix="flow"
+                    instruction="En tu trabajo o proyecto más reciente:"
                     onAnswer={handleAnswerUpdate}
                     onComplete={() => setStage(STAGES.TEST_BIG5)}
                 />
@@ -214,6 +221,7 @@ const PsychometricTest = () => {
                 <QuestionBlock
                     questions={PSYCHOMETRIC_QUESTIONS.big5}
                     prefix="big5"
+                    instruction="Descríbete a ti mismo honestamente:"
                     onAnswer={handleAnswerUpdate}
                     onComplete={() => setStage(STAGES.LOADING)}
                 />
