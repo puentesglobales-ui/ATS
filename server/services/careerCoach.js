@@ -179,6 +179,90 @@ class CareerCoach {
             throw new Error("Failed to rewrite CV");
         }
     }
+
+    async generateCV(userData) {
+        // userData: { role, market, industry, experienceLevel, ... }
+        const { role, market, industry, rawData } = userData;
+
+        const isUSA = market === 'USA';
+
+        const systemPrompt = `
+        **IDENTITY:**
+        You are an expert Resume Writer & Career Strategist with 15 years of experience in Fortune 500 recruiting.
+        
+        **OBJECTIVE:**
+        Draft a high-impact, professional CV content based on the user's provided data.
+        
+        **MARKET CONTEXT: ${market || 'Global'}**
+        ${isUSA ?
+                `REGLAS USA:
+            1. Philosophy: "Action + Impact". Do not say what you did, say what you ACHIEVED.
+            2. Format: Extreme brevity. Bullet points starting with strong action verbs.
+            3. NO PERSONAL DATA: No photo, age, marital status, or religion.
+            4. Metrics: Quantify results where possible.`
+                :
+                `REGLAS EUROPE/LATAM:
+            1. Philosophy: "Competence + Responsibility". Show technical solidity and soft skills.
+            2. Format: Clear and professional structure.
+            3. Personal: Include languages with levels (A1-C2).`
+            }
+
+        **OUTPUT FORMAT (JSON ONLY):**
+        Return a JSON object that matches this structure exactly:
+        {
+            "personal": {
+                "name": "User Name",
+                "email": "email@example.com",
+                "phone": "+123...",
+                "location": "City, Country",
+                "summary": "3-4 lines professional summary following: [Adjetivo] + [Título] + [Exp] + [Logro]"
+            },
+            "experience": [
+                { 
+                    "id": 1, 
+                    "role": "Job Title", 
+                    "company": "Company Name", 
+                    "date": "20XX - Present", 
+                    "description": "• Bullet point 1 (Action + Impact)\n• Bullet point 2\n• Bullet point 3" 
+                }
+            ],
+            "education": [
+                { "id": 1, "degree": "Degree Name", "school": "University Name", "date": "20XX - 20XX" }
+            ]
+        }
+        `;
+
+        const userPrompt = `
+        **USER PROFILE:**
+        Target Role: ${role}
+        Industry: ${industry}
+        Raw Input / Context: ${JSON.stringify(rawData || {})}
+        
+        Please generate the CV content now.
+        `;
+
+        try {
+            const response = await this.router.routeRequest({
+                prompt: userPrompt,
+                complexity: 'hard',
+                system_instruction: systemPrompt
+            }, {
+                response_format: { type: "json_object" }
+            });
+
+            const cleanJson = response.text.replace(/```json/g, '').replace(/```/g, '').trim();
+            return JSON.parse(cleanJson);
+
+        } catch (error) {
+            console.error("CareerCoach Generate Error:", error);
+            // Return fallback structure so frontend doesn't crash
+            return {
+                personal: { name: "Error Generando", summary: "Hubo un error al conectar con la IA." },
+                experience: [],
+                education: []
+            };
+        }
+    }
 }
 
 module.exports = new CareerCoach();

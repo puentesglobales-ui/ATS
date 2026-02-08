@@ -14,6 +14,7 @@ import {
     Loader
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import html2pdf from 'html2pdf.js';
 
 // --- MOCK TEMPLATES DATA ---
 const TEMPLATES = [
@@ -63,30 +64,55 @@ const CVBuilder = () => {
     });
 
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
 
-    // SIMULATE AI GENERATION ON MOUNT
+    // AI GENERATION ON MOUNT
     useEffect(() => {
-        if (wizardData.role) {
+        const fetchGeneratedCV = async () => {
+            if (!wizardData.role) return;
+
             setIsGenerating(true);
-            setTimeout(() => {
-                // Mock AI response building on wizard data
+            try {
+                // Determine API URL (Use Vite env or default to localhost for dev)
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+                const response = await fetch(`${API_URL}/api/generate-cv`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(wizardData) // { role, market, industry, ... }
+                });
+
+                if (!response.ok) throw new Error('Generation failed');
+
+                const data = await response.json();
+
+                // Merge AI data with state
+                setCvData(prev => ({
+                    ...prev,
+                    personal: { ...prev.personal, ...data.personal },
+                    experience: data.experience || [],
+                    education: data.education || []
+                }));
+
+                setActiveTab('content');
+
+            } catch (error) {
+                console.error("AI Generation Failed:", error);
+                // Fallback to mock data on error so user isn't stuck
                 setCvData(prev => ({
                     ...prev,
                     personal: {
                         ...prev.personal,
-                        summary: `Profesional en ${wizardData.industry || 'Tech'} enfocado en ${wizardData.role}. Perfil optimizado por IA para mercado ${wizardData.market || 'Global'} siguiendo reglas de ${wizardData.market === 'USA' ? 'Action+Impact' : 'Competencia+Review'}.`
+                        summary: "Error al generar con IA. Por favor edita manualmente."
                     },
-                    experience: [
-                        { id: 1, role: wizardData.role, company: 'Empresa Anterior', date: '2021 - Presente', description: '• Lideré la implementación de nuevas estrategias aumentado el rendimiento un 20%.\n• Coordiné equipos multidisciplinarios para asegurar entregas a tiempo.\n• Optimicé procesos internos reduciendo costos operativos.' }
-                    ],
-                    education: [
-                        { id: 1, degree: 'Grado en ' + (wizardData.industry || 'Ingeniería'), school: 'Universidad Principal', date: '2016 - 2020' }
-                    ]
+                    experience: [{ id: 1, role: wizardData.role, company: 'Ejemplo Inc', date: '2023', description: 'No se pudo conectar con la IA.' }]
                 }));
+            } finally {
                 setIsGenerating(false);
-                setActiveTab('content'); // Switch to content after gen
-            }, 2500);
-        }
+            }
+        };
+
+        fetchGeneratedCV();
     }, [wizardData]);
 
     const filteredTemplates = TEMPLATES.filter(t =>
@@ -99,6 +125,43 @@ const CVBuilder = () => {
             ...prev,
             experience: [...prev.experience, { id: Date.now(), role: 'Nuevo Rol', company: 'Empresa', date: '2023', description: '' }]
         }));
+    };
+
+    const handleExportPDF = async () => {
+        setIsExporting(true);
+        const element = document.getElementById('cv-document');
+
+        // Save current transform style to restore later
+        const originalTransform = element.style.transform;
+        const originalMarginTop = element.style.marginTop;
+        const originalMarginBottom = element.style.marginBottom;
+
+        // Reset transform to ensure full scale capture
+        // We use inline style to override Tailwind utility classes temporarily
+        element.style.transform = 'none';
+        element.style.marginTop = '0'; // Remove margin for clean capture if needed
+        element.style.marginBottom = '0';
+
+        const opt = {
+            margin: 0,
+            filename: `CV_${cvData.personal.name.replace(/\s+/g, '_')}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        try {
+            await html2pdf().set(opt).from(element).save();
+        } catch (err) {
+            console.error('PDF Export Error:', err);
+            alert('Error al generar PDF. Intenta nuevamente.');
+        } finally {
+            // Restore styles
+            element.style.transform = originalTransform;
+            element.style.marginTop = originalMarginTop;
+            element.style.marginBottom = originalMarginBottom;
+            setIsExporting(false);
+        }
     };
 
     return (
@@ -226,8 +289,13 @@ const CVBuilder = () => {
                     <button onClick={() => alert("Guardado en tu perfil (Simulación)")} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors shadow-lg border border-slate-700">
                         <Save size={16} /> <span className="hidden md:inline">Guardar</span>
                     </button>
-                    <button onClick={() => alert("Generando PDF (Simulación)")} className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-lg text-white font-bold text-sm transition-all shadow-lg shadow-cyan-500/20">
-                        <Download size={16} /> <span className="hidden md:inline">Exportar PDF</span>
+                    <button
+                        onClick={handleExportPDF}
+                        disabled={isExporting}
+                        className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-lg text-white font-bold text-sm transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isExporting ? <Loader className="animate-spin" size={16} /> : <Download size={16} />}
+                        <span className="hidden md:inline">{isExporting ? 'Generando...' : 'Exportar PDF'}</span>
                     </button>
                 </div>
 
@@ -249,6 +317,7 @@ const CVBuilder = () => {
 
                 {/* A4 PAPER PREVIEW */}
                 <motion.div
+                    id="cv-document"
                     layout
                     className="w-[210mm] min-h-[297mm] bg-white text-black shadow-2xl origin-top transform scale-[0.5] md:scale-[0.65] lg:scale-[0.85] xl:scale-100 transition-all rounded-sm overflow-hidden mt-12 md:mt-0"
                 >

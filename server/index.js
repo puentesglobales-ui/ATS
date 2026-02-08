@@ -545,6 +545,22 @@ app.post('/api/rewrite-cv', upload.single('cv'), async (req, res) => {
   }
 });
 
+app.post('/api/generate-cv', async (req, res) => {
+  const userData = req.body;
+
+  if (!userData || !userData.role) {
+    return res.status(400).json({ error: 'Missing user data or role' });
+  }
+
+  try {
+    const cvContent = await careerCoach.generateCV(userData);
+    res.json(cvContent);
+  } catch (error) {
+    console.error('CV Generation Error:', error);
+    res.status(500).json({ error: 'Generation failed', details: error.message });
+  }
+});
+
 const interviewCoach = require('./services/interviewCoach');
 
 app.post('/api/interview/start', async (req, res) => {
