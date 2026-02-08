@@ -16,6 +16,80 @@ const STAGES = {
     RESULTS: 'RESULTS'
 };
 
+// --- SUB-COMPONENT FOR QUESTIONS (Fixes Conditional Hook Error) ---
+const QuestionBlock = ({ questions, prefix, onAnswer, onComplete }) => {
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    const handleLocalAnswer = (val) => {
+        // Save answer to parent state
+        onAnswer(prefix, questions[currentIndex].id, val);
+
+        // Move to next or finish
+        if (currentIndex < questions.length - 1) {
+            setCurrentIndex(prev => prev + 1);
+        } else {
+            onComplete();
+        }
+    };
+
+    if (!questions || questions.length === 0) return <div>Error: No questions loaded.</div>;
+
+    const q = questions[currentIndex];
+    const progress = ((currentIndex + 1) / questions.length) * 100;
+
+    return (
+        <div className="max-w-2xl mx-auto p-6">
+            <div className="w-full bg-slate-800 h-2 rounded-full mb-8">
+                <motion.div
+                    className="h-full bg-cyan-500 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                />
+            </div>
+
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={q.id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="bg-slate-800 p-8 rounded-2xl shadow-xl text-center"
+                >
+                    <h2 className="text-2xl font-bold mb-8 text-white">{q.text}</h2>
+                    <div className="flex justify-center gap-4 flex-wrap">
+                        {q.scale === 3 ? (
+                            // DASS-21 (0-3)
+                            [0, 1, 2, 3].map(val => (
+                                <button
+                                    key={val}
+                                    onClick={() => handleLocalAnswer(val)}
+                                    className="px-6 py-3 rounded-xl bg-slate-700 hover:bg-cyan-600 text-white font-bold transition-all"
+                                >
+                                    {val}
+                                </button>
+                            ))
+                        ) : (
+                            // Flow/Big5 (1-5)
+                            [1, 2, 3, 4, 5].map(val => (
+                                <button
+                                    key={val}
+                                    onClick={() => handleLocalAnswer(val)}
+                                    className="w-12 h-12 rounded-full bg-slate-700 hover:bg-cyan-600 text-white font-bold flex items-center justify-center transition-all"
+                                >
+                                    {val}
+                                </button>
+                            ))
+                        )}
+                    </div>
+                    <p className="mt-4 text-slate-400 text-sm">
+                        {q.scale === 3 ? "0 (No me pasó) - 3 (Me pasó mucho)" : "1 (Desacuerdo) - 5 (Acuerdo Total)"}
+                    </p>
+                </motion.div>
+            </AnimatePresence>
+        </div>
+    );
+};
+
 const PsychometricTest = () => {
     const [stage, setStage] = useState(STAGES.INPUT);
     const [userData, setUserData] = useState({ cvText: '', jobDescription: '' });
@@ -31,74 +105,10 @@ const PsychometricTest = () => {
         setUserData(prev => ({ ...prev, cvText: `[Simulated CV Content from ${file.name}]` }));
     };
 
-    // --- TEST LOGIC ---
-    const renderQuestionBlock = (questions, prefix, nextStage) => {
-        const [currentIndex, setCurrentIndex] = useState(0);
-
-        const handleAnswer = (val) => {
-            setAnswers(prev => ({ ...prev, [`${prefix}_${questions[currentIndex].id}`]: val }));
-            if (currentIndex < questions.length - 1) {
-                setCurrentIndex(prev => prev + 1);
-            } else {
-                setStage(nextStage);
-            }
-        };
-
-        const q = questions[currentIndex];
-        const progress = ((currentIndex + 1) / questions.length) * 100;
-
-        return (
-            <div className="max-w-2xl mx-auto p-6">
-                <div className="w-full bg-slate-800 h-2 rounded-full mb-8">
-                    <motion.div
-                        className="h-full bg-cyan-500 rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                    />
-                </div>
-
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={q.id}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        className="bg-slate-800 p-8 rounded-2xl shadow-xl text-center"
-                    >
-                        <h2 className="text-2xl font-bold mb-8 text-white">{q.text}</h2>
-                        <div className="flex justify-center gap-4 flex-wrap">
-                            {q.scale === 3 ? (
-                                // DASS-21 (0-3)
-                                [0, 1, 2, 3].map(val => (
-                                    <button
-                                        key={val}
-                                        onClick={() => handleAnswer(val)}
-                                        className="px-6 py-3 rounded-xl bg-slate-700 hover:bg-cyan-600 text-white font-bold transition-all"
-                                    >
-                                        {val}
-                                    </button>
-                                ))
-                            ) : (
-                                // Flow/Big5 (1-5)
-                                [1, 2, 3, 4, 5].map(val => (
-                                    <button
-                                        key={val}
-                                        onClick={() => handleAnswer(val)}
-                                        className="w-12 h-12 rounded-full bg-slate-700 hover:bg-cyan-600 text-white font-bold flex items-center justify-center transition-all"
-                                    >
-                                        {val}
-                                    </button>
-                                ))
-                            )}
-                        </div>
-                        <p className="mt-4 text-slate-400 text-sm">
-                            {q.scale === 3 ? "0 (No me pasó) - 3 (Me pasó mucho)" : "1 (Desacuerdo) - 5 (Acuerdo Total)"}
-                        </p>
-                    </motion.div>
-                </AnimatePresence>
-            </div>
-        );
+    const handleAnswerUpdate = (prefix, id, val) => {
+        setAnswers(prev => ({ ...prev, [`${prefix}_${id}`]: val }));
     };
+
 
     // --- SUBMIT ---
     const submitTest = async () => {
@@ -182,9 +192,32 @@ const PsychometricTest = () => {
             )}
 
             {/* STAGE: TESTS */}
-            {stage === STAGES.TEST_DASS && renderQuestionBlock(PSYCHOMETRIC_QUESTIONS.dass21, 'dass', STAGES.TEST_FLOW)}
-            {stage === STAGES.TEST_FLOW && renderQuestionBlock(PSYCHOMETRIC_QUESTIONS.flow, 'flow', STAGES.TEST_BIG5)}
-            {stage === STAGES.TEST_BIG5 && renderQuestionBlock(PSYCHOMETRIC_QUESTIONS.big5, 'big5', STAGES.LOADING)}
+            {stage === STAGES.TEST_DASS && (
+                <QuestionBlock
+                    questions={PSYCHOMETRIC_QUESTIONS.dass21}
+                    prefix="dass"
+                    onAnswer={handleAnswerUpdate}
+                    onComplete={() => setStage(STAGES.TEST_FLOW)}
+                />
+            )}
+
+            {stage === STAGES.TEST_FLOW && (
+                <QuestionBlock
+                    questions={PSYCHOMETRIC_QUESTIONS.flow}
+                    prefix="flow"
+                    onAnswer={handleAnswerUpdate}
+                    onComplete={() => setStage(STAGES.TEST_BIG5)}
+                />
+            )}
+
+            {stage === STAGES.TEST_BIG5 && (
+                <QuestionBlock
+                    questions={PSYCHOMETRIC_QUESTIONS.big5}
+                    prefix="big5"
+                    onAnswer={handleAnswerUpdate}
+                    onComplete={() => setStage(STAGES.LOADING)}
+                />
+            )}
 
             {/* STAGE: LOADING */}
             {stage === STAGES.LOADING && (
