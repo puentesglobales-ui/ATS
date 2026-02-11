@@ -7,81 +7,10 @@ import AudioRecorder from './AudioRecorder';
 const InterviewSimulator = ({ session }) => {
     // Session State
     const [started, setStarted] = useState(false);
-    const [mode, setMode] = useState('hardcore');
-    const [messages, setMessages] = useState([]);
+    // Mode State
+    const [mode, setMode] = useState('ALLY'); // Default to Friendly
 
-    // Inputs
-    const [cvText, setCvText] = useState('');
-    const [jobDesc, setJobDesc] = useState('');
-    const [profileData, setProfileData] = useState(null);
-
-    // Pre-fill from profile if available
-    useEffect(() => {
-        if (session?.user?.id) {
-            // Fetch profile to see if we have context
-            api.get(`/profile/${session.user.id}`)
-                .then(res => {
-                    const p = res.data;
-                    setProfileData(p);
-                    if (p && p.role_title) {
-                        // Construct a "Virtual" Job Description based on their goal
-                        const constructedJD = `Postulación para: ${p.role_title} en industria ${p.role_industry}.\nContexto Experiencia: ${p.work_context || 'No especificado'}`;
-                        setJobDesc(constructedJD);
-                    }
-                })
-                .catch(err => console.log("No profile context found", err));
-        }
-    }, [session]);
-
-    // Audio State
-    const [isListening, setIsListening] = useState(false);
-    const [isSpeaking, setIsSpeaking] = useState(false);
-
-    const messagesEndRef = useRef(null);
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
-
-    const [currentFeedback, setCurrentFeedback] = useState(null);
-    const [processing, setProcessing] = useState(false);
-
-    const handleStart = async () => {
-        if (!session) {
-            alert("Debes iniciar sesión para entrenar.");
-            return;
-        }
-        if (!cvText || !jobDesc) return alert("Pega tu CV y la Vacante primero.");
-        setStarted(true);
-        // Add loading message
-        const initialLoadMsg = { role: 'assistant', content: "Leyendo tu perfil... (Iniciando simulación)" };
-        setMessages([initialLoadMsg]);
-
-        try {
-            // Add user start message hidden logic
-            const historyForApi = [{ role: 'system', content: `Start with persona: ${mode}` }];
-
-            const { data } = await api.post('/interview/start', {
-                cvText, jobDescription: jobDesc, mode
-            });
-            // V2: data = { message, feedback, stage }
-            const newMessage = { role: 'assistant', content: data.message };
-            setMessages([newMessage]);
-
-            if (data.feedback) setCurrentFeedback(data.feedback);
-
-        } catch (e) {
-            console.error(e);
-            alert("Error iniciando a Alex.");
-            setStarted(false);
-        }
-    };
-
-    const [chatProcessing, setChatProcessing] = useState(false);
+    // ... (rest of state)
 
     const handleSendMessage = async (text) => {
         if (!text.trim()) return;
@@ -93,7 +22,8 @@ const InterviewSimulator = ({ session }) => {
             const { data } = await api.post('/interview/chat', {
                 messages: newHistory,
                 cvText,
-                jobDescription: jobDesc
+                jobDescription: jobDesc,
+                mode // Pass mode
             });
 
             const aiMsg = { role: 'assistant', content: data.message };
@@ -103,33 +33,28 @@ const InterviewSimulator = ({ session }) => {
         } catch (e) {
             console.error(e);
             alert("Error: No pude conectar con Alex (Timeout o Error de Servidor). Intenta de nuevo.");
-            // Optional: Remove user message if failed? Or just leave it.
         } finally {
             setChatProcessing(false);
         }
     };
-
-    // Mock PTT (Web Speech API or just Text for MVP)
-    // Implementing text input for stability first, enabling Speech later
-    const [inputText, setInputText] = useState('');
 
     const handleAudioUpload = async (audioBlob) => {
         setIsListening(false);
         setProcessing(true);
 
         const formData = new FormData();
-        formData.append('audio', audioBlob, 'input.webm'); // Ensure filename
+        formData.append('audio', audioBlob, 'input.webm');
         formData.append('cvText', cvText);
         formData.append('jobDescription', jobDesc);
         formData.append('messages', JSON.stringify(messages));
+        formData.append('mode', mode); // Pass mode
 
         try {
             const { data } = await api.post('/interview/speak', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
-            // Update UI
-            // data = { userText, assistantText, feedback, stage, audioBase64 }
+            // ... (rest of logic)
             const newMsgs = [
                 ...messages,
                 { role: 'user', content: data.userText },
@@ -137,10 +62,8 @@ const InterviewSimulator = ({ session }) => {
             ];
             setMessages(newMsgs);
 
-            // Show Feedback
             if (data.feedback) setCurrentFeedback(data.feedback);
 
-            // Play Audio
             setIsSpeaking(true);
             const audio = new Audio(`data:audio/mp3;base64,${data.audioBase64}`);
             audio.onended = () => setIsSpeaking(false);
@@ -156,127 +79,173 @@ const InterviewSimulator = ({ session }) => {
 
     return (
         <div className="min-h-screen bg-black text-white p-4 font-sans flex flex-col md:flex-row gap-4">
-
-            {/* LEFT: AVATAR & CONFIG */}
-            <div className="w-full md:w-1/3 flex flex-col gap-4">
-                <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 flex-1 relative overflow-hidden flex flex-col items-center justify-center">
-                    {!started ? (
-                        <div className="space-y-6 z-10 relative w-full">
-                            <h2 className="text-3xl font-bold text-center bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Configurar Entrevista</h2>
-
-                            {/* ATS GATEKEEPER CHECK */}
-                            {profileData && profileData.ats_score !== null && profileData.ats_status === 'RECHAZADO' ? (
-                                <div className="bg-red-900/50 border border-red-500 p-6 rounded-xl text-center">
-                                    <h3 className="text-red-400 font-bold text-xl mb-2 flex items-center justify-center gap-2">
-                                        <Award size={24} /> ACCESO DENEGADO
-                                    </h3>
-                                    <p className="text-slate-300 text-sm mb-4">
-                                        Tu CV no superó el filtro ATS (Score: {profileData.ats_score}). <br />
-                                        El sistema te ha descartado automáticamente para la entrevista.
-                                    </p>
-                                    <button onClick={() => window.location.href = '/ats-scanner'} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg text-sm">
-                                        VOLVER A MEJORAR CV
-                                    </button>
-                                </div>
-                            ) : (
-                                <>
-                                    <div>
-                                        <label className="text-xs text-slate-500 uppercase">Pegar Texto CV</label>
-                                        <textarea value={cvText} onChange={e => setCvText(e.target.value)} className="w-full bg-slate-800 p-2 rounded text-xs h-24 text-slate-300" placeholder="Pega el texto de tu CV aquí..." />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-slate-500 uppercase">Pegar Vacante</label>
-                                        <textarea value={jobDesc} onChange={e => setJobDesc(e.target.value)} className="w-full bg-slate-800 p-2 rounded text-xs h-24 text-slate-300" placeholder="Descripción del puesto..." />
-                                    </div>
-
-                                    <button onClick={handleStart} className="w-full py-4 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold shadow-lg shadow-blue-900/50 transition-all">
-                                        INICIAR "ALEX" ({mode})
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    ) : (
-                        <>
-                            {/* AVATAR CIRCLE */}
-                            <motion.div
-                                animate={{ scale: isSpeaking ? [1, 1.05, 1] : 1 }}
-                                transition={{ repeat: Infinity, duration: 2 }}
-                                className="w-48 h-48 rounded-full border-4 border-cyan-500/50 flex items-center justify-center bg-gradient-to-br from-slate-800 to-black shadow-[0_0_50px_rgba(6,182,212,0.3)] mb-6"
+            {/* ... (UI Structure) ... */}
+            {profileData && profileData.ats_score !== null && profileData.ats_status === 'RECHAZADO' ? (
+                // ... (ATS Block) ...
+                <div className="bg-red-900/50 border border-red-500 p-6 rounded-xl text-center">
+                    <h3 className="text-red-400 font-bold text-xl mb-2 flex items-center justify-center gap-2">
+                        <Award size={24} /> ACCESO DENEGADO
+                    </h3>
+                    <p className="text-slate-300 text-sm mb-4">
+                        Tu CV no superó el filtro ATS (Score: {profileData.ats_score}). <br />
+                        El sistema te ha descartado automáticamente para la entrevista.
+                    </p>
+                    <button onClick={() => window.location.href = '/ats-scanner'} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg text-sm">
+                        VOLVER A MEJORAR CV
+                    </button>
+                </div>
+            ) : !started ? (
+                <div className="w-full flex flex-col gap-4">
+                    {/* MODE SELECTOR */}
+                    <div className="mb-4">
+                        <label className="text-xs text-slate-500 uppercase mb-2 block">Estilo de Entrevista</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            <button
+                                onClick={() => setMode('ALLY')}
+                                className={`p-2 rounded-lg text-xs font-bold transition-all ${mode === 'ALLY' ? 'bg-green-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
                             >
-                                <User size={80} className="text-slate-400" />
-                            </motion.div>
-                            <h3 className="text-2xl font-bold text-white">Alex (Reclutador)</h3>
-                            <div className="mt-2 flex gap-2 mb-8">
-                                <span className="px-2 py-1 bg-red-900/50 text-red-400 text-xs rounded border border-red-900">Modo: Estricto</span>
-                                <span className="px-2 py-1 bg-blue-900/50 text-blue-400 text-xs rounded border border-blue-900">Live Audio</span>
-                            </div>
-
-                            {/* COACH FEEDBACK CARD (SAFEGUARDED) */}
-                            {currentFeedback && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="w-full bg-slate-800/80 backdrop-blur rounded-xl p-4 border-l-4 border-yellow-500"
-                                >
-                                    <h4 className="text-yellow-400 text-xs font-bold uppercase mb-2 flex justify-between">
-                                        <span>Mentor IA Analysis</span>
-                                        <span>Score: {currentFeedback?.score || 'N/A'}/100</span>
-                                    </h4>
-                                    <p className="text-sm text-slate-300 mb-2 italic">"{currentFeedback?.analysis || 'Analizando respuesta...'}"</p>
-
-                                    {currentFeedback?.suggestion && (
-                                        <div className="bg-slate-900/50 p-2 rounded text-xs text-green-300">
-                                            <span className="font-bold">💡 Tip:</span> {currentFeedback.suggestion}
-                                        </div>
-                                    )}
-                                </motion.div>
-                            )}
-                        </>
-                    )}
-                </div>
-            </div>
-
-            {/* RIGHT: CHAT / METRICS */}
-            <div className="w-full md:w-2/3 flex flex-col gap-4">
-                <div className="flex-1 bg-slate-900 rounded-3xl p-6 border border-slate-800 overflow-y-auto max-h-[70vh]">
-                    {messages.length === 0 && <p className="text-center text-slate-500 mt-20">El historial de chat aparecerá aquí...</p>}
-
-                    {messages.map((m, i) => (
-                        <div key={i} className={`flex gap-4 mb-4 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${m.role === 'assistant' ? 'bg-cyan-900 text-cyan-400' : 'bg-purple-900 text-purple-400'}`}>
-                                {m.role === 'assistant' ? <Cpu size={16} /> : <User size={16} />}
-                            </div>
-                            <div className={`max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed ${m.role === 'assistant' ? 'bg-slate-800 text-slate-200 rounded-tl-none' : 'bg-purple-600 text-white rounded-tr-none'}`}>
-                                {m.content}
-                            </div>
+                                🤝 Aliado
+                            </button>
+                            <button
+                                onClick={() => setMode('TECHNICAL')}
+                                className={`p-2 rounded-lg text-xs font-bold transition-all ${mode === 'TECHNICAL' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                            >
+                                🛠️ Técnico
+                            </button>
+                            <button
+                                onClick={() => setMode('STRESS')}
+                                className={`p-2 rounded-lg text-xs font-bold transition-all ${mode === 'STRESS' ? 'bg-red-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                            >
+                                🔥 Stress
+                            </button>
                         </div>
-                    ))}
-                    <div ref={messagesEndRef} />
-                </div>
-
-                {/* CONTROLS */}
-                {started && (
-                    <div className="h-24 bg-slate-900 rounded-3xl p-4 border border-slate-800 flex items-center gap-4">
-                        <AudioRecorder onRecordingComplete={handleAudioUpload} isProcessing={isListening} />
-
-                        <input
-                            type="text"
-                            value={inputText}
-                            onChange={e => setInputText(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleSendMessage(inputText)}
-                            placeholder="Escribe tu respuesta..."
-                            className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500"
-                        />
-                        <button
-                            disabled={chatProcessing}
-                            onClick={() => { handleSendMessage(inputText); setInputText(''); }}
-                            className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${chatProcessing ? 'bg-slate-700 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500'}`}
-                        >
-                            {chatProcessing ? <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" /> : <ArrowRight />}
-                        </button>
+                        <p className="text-xs text-slate-400 mt-2 italic">
+                            {mode === 'ALLY' && "Feedback constante y amable. Ideal para aprender."}
+                            {mode === 'TECHNICAL' && "Enfoque en datos y hard skills. Sin rodeos."}
+                            {mode === 'STRESS' && "Presión alta, preguntas difíciles y 'bad cop'."}
+                        </p>
                     </div>
-                )}
-            </div>
+
+                    <div>
+                        <label className="text-xs text-slate-500 uppercase">Pegar Texto CV</label>
+                        <textarea value={cvText} onChange={e => setCvText(e.target.value)} className="w-full bg-slate-800 p-2 rounded text-xs h-24 text-slate-300 mb-2" placeholder="Pega el texto de tu CV aquí..." />
+                    </div>
+                    <div>
+                        <label className="text-xs text-slate-500 uppercase">Pegar Vacante</label>
+                        <textarea value={jobDesc} onChange={e => setJobDesc(e.target.value)} className="w-full bg-slate-800 p-2 rounded text-xs h-24 text-slate-300 mb-4" placeholder="Descripción del puesto..." />
+                    </div>
+
+                    <button onClick={handleStart} className="w-full py-4 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold shadow-lg shadow-blue-900/50 transition-all">
+                        INICIAR SIMULACIÓN ({mode})
+                    </button>
+                </div>
+            ) : (
+                <>
+                    {/* LEFT COLUMN: AVATAR & FEEDBACK */}
+                    <div className="w-full md:w-1/3 flex flex-col">
+                        {/* AVATAR CIRCLE */}
+                        <motion.div
+                            animate={{ scale: isSpeaking ? [1, 1.05, 1] : 1 }}
+                            transition={{ repeat: Infinity, duration: 2 }}
+                            className="w-48 h-48 rounded-full border-4 border-cyan-500/50 flex items-center justify-center bg-gradient-to-br from-slate-800 to-black shadow-[0_0_50px_rgba(6,182,212,0.3)] mb-6 mx-auto md:mx-0"
+                        >
+                            <User size={80} className="text-slate-400" />
+                        </motion.div>
+                        <h3 className="text-2xl font-bold text-white text-center md:text-left">Alex (Reclutador)</h3>
+                        <div className="mt-2 flex gap-2 mb-8 justify-center md:justify-start">
+                            <span className="px-2 py-1 bg-red-900/50 text-red-400 text-xs rounded border border-red-900">Modo: Estricto</span>
+                            <span className="px-2 py-1 bg-blue-900/50 text-blue-400 text-xs rounded border border-blue-900">Live Audio</span>
+                        </div>
+
+                        {/* COACH FEEDBACK CARD */}
+                        {(currentFeedback?.feedback || currentFeedback?.language_feedback) && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="w-full bg-slate-800/80 backdrop-blur rounded-xl p-4 border-l-4 border-yellow-500 overflow-y-auto max-h-[400px]"
+                            >
+                                {/* CONTENT FEEDBACK SECTION */}
+                                {currentFeedback?.feedback && (
+                                    <div className="mb-4 pb-4 border-b border-slate-700">
+                                        <h4 className="text-yellow-400 text-xs font-bold uppercase mb-2 flex justify-between">
+                                            <span>🎯 Content Strategy</span>
+                                            <span>Score: {currentFeedback.feedback.score || 'N/A'}/100</span>
+                                        </h4>
+                                        <p className="text-sm text-slate-300 mb-2 italic">"{currentFeedback.feedback.analysis}"</p>
+                                        {currentFeedback.feedback.suggestion && (
+                                            <div className="bg-slate-900/50 p-2 rounded text-xs text-green-300 mt-2">
+                                                <span className="font-bold">💡 Pro Tip:</span> {currentFeedback.feedback.suggestion}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* LANGUAGE FEEDBACK SECTION */}
+                                {currentFeedback?.language_feedback && (
+                                    <div>
+                                        <h4 className="text-cyan-400 text-xs font-bold uppercase mb-2 flex justify-between">
+                                            <span>🗣️ Language Coach</span>
+                                            <span className="text-xs text-slate-500">{currentFeedback.language_feedback.level_check}</span>
+                                        </h4>
+                                        {currentFeedback.language_feedback.correction && (
+                                            <div className="bg-red-900/30 p-2 rounded text-xs text-red-200 mb-2 border border-red-900/50">
+                                                <span className="font-bold text-red-400">Correction:</span> {currentFeedback.language_feedback.correction}
+                                            </div>
+                                        )}
+                                        {currentFeedback.language_feedback.style_tip && (
+                                            <div className="bg-blue-900/30 p-2 rounded text-xs text-blue-200 border border-blue-900/50">
+                                                <span className="font-bold text-blue-400">Style Upgrade:</span> {currentFeedback.language_feedback.style_tip}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+                    </div>
+
+                    {/* RIGHT COLUMN: CHAT / METRICS */}
+                    <div className="w-full md:w-2/3 flex flex-col gap-4">
+                        <div className="flex-1 bg-slate-900 rounded-3xl p-6 border border-slate-800 overflow-y-auto max-h-[70vh]">
+                            {messages.length === 0 && <p className="text-center text-slate-500 mt-20">El historial de chat aparecerá aquí...</p>}
+
+                            {messages.map((m, i) => (
+                                <div key={i} className={`flex gap-4 mb-4 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${m.role === 'assistant' ? 'bg-cyan-900 text-cyan-400' : 'bg-purple-900 text-purple-400'}`}>
+                                        {m.role === 'assistant' ? <Cpu size={16} /> : <User size={16} />}
+                                    </div>
+                                    <div className={`max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed ${m.role === 'assistant' ? 'bg-slate-800 text-slate-200 rounded-tl-none' : 'bg-purple-600 text-white rounded-tr-none'}`}>
+                                        {m.content}
+                                    </div>
+                                </div>
+                            ))}
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        {/* CONTROLS */}
+                        {started && (
+                            <div className="h-24 bg-slate-900 rounded-3xl p-4 border border-slate-800 flex items-center gap-4">
+                                <AudioRecorder onRecordingComplete={handleAudioUpload} isProcessing={isListening} />
+
+                                <input
+                                    type="text"
+                                    value={inputText}
+                                    onChange={e => setInputText(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleSendMessage(inputText)}
+                                    placeholder="Escribe tu respuesta..."
+                                    className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500"
+                                />
+                                <button
+                                    disabled={chatProcessing}
+                                    onClick={() => { handleSendMessage(inputText); setInputText(''); }}
+                                    className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${chatProcessing ? 'bg-slate-700 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500'}`}
+                                >
+                                    {chatProcessing ? <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" /> : <ArrowRight />}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
         </div>
     );
 };

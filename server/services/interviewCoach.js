@@ -1,26 +1,51 @@
-const aiRouter = require('./aiRouter');
+const { SYLLABUS_FULL } = require('../data/syllabus_full');
+const { generateResponse, PERSONAS } = require('./aiRouter');
 
 class InterviewCoach {
     constructor() {
-        this.router = aiRouter;
+        // No explicit router instance needed as we import functions directly
     }
 
     /**
      * initializes the interview context
      */
-    generateSystemPrompt(cvText, jobDescription) {
+    generateSystemPrompt(cvText, jobDescription, mode = 'ALLY', userLang = 'en', userLevel = 'B2') {
+        let basePersona = PERSONAS.RECRUITER_ALLY;
+        let modeInstruction = "";
+
+        if (mode === 'TECHNICAL') {
+            basePersona = PERSONAS.RECRUITER_TECHNICAL;
+            modeInstruction = "Focus on technical accuracy. Drill down heavily on details.";
+        } else if (mode === 'STRESS') {
+            basePersona = PERSONAS.RECRUITER_STRESS;
+            modeInstruction = "Be challenging. Test resilience. Use silence. Interrupt if vague.";
+        }
+
+        // --- LINGUISTIC ENGINE INJECTION ---
+        const langKey = userLang.substring(0, 2).toLowerCase();
+        // Fallback to English B2 if not found
+        const syllabus = SYLLABUS_FULL[langKey]?.[userLevel] || SYLLABUS_FULL['en']['B2'];
+
+        const linguisticInstructions = `
+        **LINGUISTIC EXPECTATIONS (${userLang.toUpperCase()} - Level ${userLevel}):**
+        - **Grammar to Check:** ${syllabus.grammar}
+        - **Expected Style:** ${syllabus.interaction_style}
+        - **Common Errors to Flag:** ${syllabus.expected_errors ? syllabus.expected_errors.join(", ") : "Basic grammar errors"}
+        - **Feedback Strategy:** ${syllabus.feedback_protocol}
+        `;
+
         return `
-        **IDENTITY:**
-        You are "Alex", a generic simulator engine acting as two entities simultaneously:
-        1. **ALEX (The Recruiter):** A sharp, professional Senior Technical Recruiter. Skeptical, focused on facts, testing the candidate.
-        2. **COACH (The Teacher):** An invisible mentor evaluating the candidate's performance in real-time.
+        ${basePersona}
 
         **INPUT CONTEXT:**
         - CV Content: "${cvText.slice(0, 2000)}..."
         - Job Description: "${jobDescription.slice(0, 1000)}..."
 
         **YOUR GOAL:**
-        Conduct a realistic job interview while simultaneously providing educational feedback JSON data.
+        Conduct a realistic job interview while simultaneously providing **DUAL-LAYER FEEDBACK** (Content + Language).
+        ${modeInstruction}
+
+        ${linguisticInstructions}
 
         **INTERVIEW PHASES (The Layers):**
         1. **Icebreaker:** "Tell me about yourself", "Why this role?". Focus on clarity.
@@ -32,77 +57,59 @@ class InterviewCoach {
         You MUST return valid JSON. Do not output markdown blocks.
         Structure:
         {
-            "dialogue": "String. What Alex says to the candidate. Keep it spoken, natural, professional. Max 2-3 sentences.",
+            "dialogue": "String. What (The Recruiter Persona) says to the candidate. Keep it spoken, natural, professional. Max 2-3 sentences.",
             "feedback": {
-                "score": Integer (0-100),
-                "analysis": "String. Brief analysis of the user's LAST answer.",
-                "good": "String. What they did well (or null).",
-                "bad": "String. What they did wrong (or null).",
-                "suggestion": "String. How a Senior request would have answered better (didactic)."
+                "score": Integer (0-100 based on content),
+                "analysis": "String. Brief analysis of the CONTENT (STAR method, clarity).",
+                "good": "String. What they did well (Content/Behavior).",
+                "bad": "String. What they did wrong (Content/Behavior).",
+                "suggestion": "String. How a Senior request would have answered better (Content)."
+            },
+            "language_feedback": {
+                "level_check": "String. (e.g. 'Your level seems B1, role requires B2').",
+                "correction": "String. Specific grammar/vocabulary correction based on ${userLevel} protocols.",
+                "style_tip": "String. Tip to sound more professional/native."
             },
             "stage": "String. Current Phase (e.g. 'ICEBREAKER', 'TECHNICAL', 'BEHAVIORAL')"
         }
 
         **BEHAVIOR RULES:**
         - **First Turn:** If history is empty, Introduce yourself briefly and ask the first question (Phase 1). Feedback should be null.
-        - **Subsequent Turns:** Analyze the user's input. Give feedback in the JSON. Then, as Alex, react naturally and ask the NEXT question or follow up.
-        - **Language:** Detect user language (Spanish/English/German) and match it for 'dialogue'. Keep 'feedback' in the SAME language.
+        - **Subsequent Turns:** Analyze the user's input. Give legacy 'feedback' AND new 'language_feedback'. Then, as Alex/Marcus/Victoria, react naturally.
+        - **Language:** The 'dialogue' MUST be in the target language (${userLang}). 'feedback' fields can be in the same language or user's native if known.
         - **Voice Capable:** If user mentions speaking/audio, say "I'm listening".
         `;
     }
 
-    async getInterviewResponse(chatHistory, cvText, jobDescription) {
-        const systemPrompt = this.generateSystemPrompt(cvText, jobDescription);
+    async getInterviewResponse(chatHistory, cvText, jobDescription, mode = 'ALLY') {
+        const systemPrompt = this.generateSystemPrompt(cvText, jobDescription, mode);
 
-        const messages = [
-            { role: 'system', content: systemPrompt },
-            ...chatHistory
-        ];
+        // We need JSON output, and `aiRouter.generateResponse` usually returns text.
+        // However, we instructed the model to return JSON in the system prompt.
+        // Let's use `generateResponse` and try to parse the result.
+        // Gemini Flash is good at following formats if instructed.
 
         try {
-            // Using logic from v2 strategy: Force JSON mode
-            const openai = require('openai'); // Lazy load if needed or use from outer scope if available, but assuming router handles it usually. 
-            // Actually, this class uses 'this.router'. We need to check if router supports JSON mode arg or if we bypass router for this specific structured task.
-            // For MVP speed and stability, let's use the router but pass a specific instruction or just use OpenAI directly here if router is too simple.
-            // Let's rely on the router's chat method but we need to ensure it passes the system prompt correctly.
-            // "this.router.chat" might return a string.
-            // Let's bypass router wrapper for this specific "Coach Mode" to ensure we get JSON, or modify router. 
-            // To be safe and consistent with the codebase "aiRouter.js":
+            // Get raw response from Router (Gemini -> DeepSeek -> OpenAI)
+            const lastUserMessage = chatHistory.length > 0 ? chatHistory[chatHistory.length - 1].content : "Hello";
+            const historyForRouter = chatHistory.slice(0, -1);
 
-            // Let's assume we can ask the router. If not, we'll implement direct call here for "Smart Features".
-            // Since we need "response_format: { type: 'json_object' }", let's use the OpenAI instance directly if possible or update the router.
-            // Checking imports... 'aiRouter' is imported. 
+            const rawResponse = await generateResponse(lastUserMessage, systemPrompt, historyForRouter);
 
-            // DIRECT OPENAI CALL FOR CONTROL (Bypassing simple router for complex JSON task)
-            const { OpenAI } = require('openai');
-            const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.trim() : '' });
+            // Clean Markdown code blocks if any (Gemini often wraps JSON in ```json ... ```)
+            let cleanJson = rawResponse.replace(/```json/g, '').replace(/```/g, '').trim();
 
-            const completion = await client.chat.completions.create({
-                model: "gpt-4o",
-                messages: messages,
-                response_format: { type: "json_object" },
-                temperature: 0.7
-            });
-
-            const content = completion.choices[0].message.content;
-
-            // Validate JSON
-            try {
-                const parsed = JSON.parse(content);
-                return parsed; // Return Object, Controller will handle it
-            } catch (e) {
-                console.error("JSON Parse Error in Coach:", e);
-                return {
-                    dialogue: "Internal error in Alex's brain. Let's continue...",
-                    feedback: null
-                };
-            }
+            // Parse
+            const parsed = JSON.parse(cleanJson);
+            return parsed;
 
         } catch (error) {
-            console.error("Interview Coach Error:", error);
+            console.error("Interview Coach Error / JSON Parse:", error);
+            // Fallback object
             return {
-                dialogue: "I'm having trouble connecting to my evaluation matrix.",
-                feedback: null
+                dialogue: "I'm having a bit of trouble connecting to my feedback matrix. Let's continue. Tell me more.",
+                feedback: null,
+                stage: "ERROR_RECOVERY"
             };
         }
     }

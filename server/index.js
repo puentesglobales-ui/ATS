@@ -571,7 +571,7 @@ app.post('/api/interview/start', async (req, res) => {
   }
 
   try {
-    const responseObj = await interviewCoach.getInterviewResponse([], cvText, jobDescription);
+    const responseObj = await interviewCoach.getInterviewResponse([], cvText, jobDescription, mode);
     // V2: responseObj is { dialogue, feedback, stage }
     res.json({ message: responseObj.dialogue, feedback: responseObj.feedback, stage: responseObj.stage });
   } catch (error) {
@@ -581,10 +581,10 @@ app.post('/api/interview/start', async (req, res) => {
 });
 
 app.post('/api/interview/chat', async (req, res) => {
-  const { messages, cvText, jobDescription } = req.body;
+  const { messages, cvText, jobDescription, mode } = req.body;
 
   try {
-    const responseObj = await interviewCoach.getInterviewResponse(messages, cvText, jobDescription);
+    const responseObj = await interviewCoach.getInterviewResponse(messages, cvText, jobDescription, mode);
     // V2: responseObj is { dialogue, feedback, stage }
     res.json({ message: responseObj.dialogue, feedback: responseObj.feedback, stage: responseObj.stage });
   } catch (error) {
@@ -638,7 +638,7 @@ app.post('/api/psychometric/submit', async (req, res) => {
 
 app.post('/api/interview/speak', upload.single('audio'), async (req, res) => {
   const audioFile = req.file;
-  const { cvText, jobDescription, messages } = req.body;
+  const { cvText, jobDescription, messages, mode } = req.body;
 
   let parsedMessages = [];
   try {
@@ -684,7 +684,7 @@ app.post('/api/interview/speak', upload.single('audio'), async (req, res) => {
 
     // Get AI response
     // Get AI response (V2: returns { dialogue, feedback, stage })
-    const responseObj = await interviewCoach.getInterviewResponse(newHistory, cvText, jobDescription);
+    const responseObj = await interviewCoach.getInterviewResponse(newHistory, cvText, jobDescription, mode);
     const assistantText = responseObj.dialogue || "Error generating response.";
     const feedback = responseObj.feedback;
     const stage = responseObj.stage;
