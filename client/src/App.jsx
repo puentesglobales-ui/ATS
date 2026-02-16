@@ -141,25 +141,21 @@ function App() {
         <Routes>
           <Route path="/login" element={!session ? <Login /> : <Navigate to={getRedirectPath()} />} />
 
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <Dashboard session={session} />
-            </ProtectedRoute>
-          } />
+          <Route path="/dashboard" element={<Dashboard session={session} />} />
 
           {/* Tools */}
-          <Route path="/ats-scanner" element={<ProtectedRoute><ATSScanner session={session} /></ProtectedRoute>} />
-          <Route path="/interview" element={<ProtectedRoute><InterviewSimulator session={session} /></ProtectedRoute>} />
-          <Route path="/psychometric" element={<ProtectedRoute><PuentesAssessment /></ProtectedRoute>} />
+          <Route path="/ats-scanner" element={<ATSScanner session={session} />} />
+          <Route path="/interview" element={<InterviewSimulator session={session} />} />
+          <Route path="/psychometric" element={<PuentesAssessment />} />
 
           {/* CEREBRO MAESTRO */}
           <Route path="/cerebro" element={<ProtectedRoute><EtiquetadoDashboard /></ProtectedRoute>} />
 
-          <Route path="/cv-builder" element={<ProtectedRoute><CVBuilder /></ProtectedRoute>} />
-          <Route path="/cv-editor" element={<ProtectedRoute><CVEditor /></ProtectedRoute>} />
-          <Route path="/cv-wizard" element={<ProtectedRoute><CVWizard /></ProtectedRoute>} />
-          <Route path="/languages" element={<ProtectedRoute><LanguageSelector /></ProtectedRoute>} />
-          <Route path="/study" element={<ProtectedRoute><StudyPlan /></ProtectedRoute>} />
+          <Route path="/cv-builder" element={<CVBuilder />} />
+          <Route path="/cv-editor" element={<CVEditor />} />
+          <Route path="/cv-wizard" element={<CVWizard />} />
+          <Route path="/languages" element={<LanguageSelector />} />
+          <Route path="/study" element={<StudyPlan />} />
 
 
           {/* Utility Routes */}

@@ -38,7 +38,7 @@ const LandingPage = () => {
             badge: "SCORE GRATIS",
             icon: <FileText className="text-blue-400" />,
             color: "blue",
-            link: "/login"
+            link: "/ats-scanner"
         },
         {
             title: "Test Psicométrico",
@@ -46,7 +46,7 @@ const LandingPage = () => {
             badge: "RESULTADO GRATIS",
             icon: <Brain className="text-purple-400" />,
             color: "purple",
-            link: "/login"
+            link: "/psychometric"
         },
         {
             title: "Búsqueda Laboral",
@@ -54,7 +54,7 @@ const LandingPage = () => {
             badge: "ILIMITADO",
             icon: <Search className="text-emerald-400" />,
             color: "emerald",
-            link: "/login"
+            link: "/dashboard"
         }
     ];
 
@@ -118,7 +118,7 @@ const LandingPage = () => {
                             <Link to="/cv-wizard" className="px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-lg hover:scale-105 transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-3">
                                 <Sparkles size={20} className="text-cyan-400" /> Crear mi CV con IA en 30s
                             </Link>
-                            <Link to="/login" className="px-10 py-5 bg-white border border-slate-200 text-slate-900 rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-3">
+                            <Link to="/ats-scanner" className="px-10 py-5 bg-white border border-slate-200 text-slate-900 rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-3">
                                 Escanear mi CV Actual (Gratis)
                             </Link>
                         </div>
@@ -165,8 +165,8 @@ const LandingPage = () => {
                 <div className="container mx-auto px-6">
                     <div className="max-w-3xl mb-20 text-slate-900">
                         <h2 className="text-[10px] font-black text-cyan-600 uppercase tracking-[0.4em] mb-4">Arsenal de Elite</h2>
-                        <h3 className="text-5xl font-black mb-6">4 Herramientas profesionales. <br />1 Objetivo: calificar para el trabajo.</h3>
-                        <p className="text-slate-500 text-lg font-medium">Herramientas Enterprise que headhunters pagan por usar. Para ti, el acceso básico es <span className="text-slate-900">100% gratuito.</span></p>
+                        <h3 className="text-5xl font-black mb-6 leading-tight">Somos una empresa de Vanguardia. <br />Tenemos Herramientas como las Grandes.</h3>
+                        <p className="text-slate-500 text-lg font-medium">Utiliza estas 4 Herramientas para lograrlo</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
