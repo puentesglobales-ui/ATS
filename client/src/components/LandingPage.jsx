@@ -115,7 +115,7 @@ const LandingPage = () => {
                         </p>
 
                         <div className="flex flex-col sm:flex-row justify-center gap-4 mb-20">
-                            <Link to="/cv-wizard" className="px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-lg hover:scale-105 transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-3">
+                            <Link to="/login" className="px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-lg hover:scale-105 transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-3">
                                 <Sparkles size={20} className="text-cyan-400" /> Crear mi CV con IA en 30s
                             </Link>
                             <Link to="/login" className="px-10 py-5 bg-white border border-slate-200 text-slate-900 rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-3">
@@ -302,7 +302,7 @@ const LandingPage = () => {
                         <div>
                             <h4 className="text-slate-900 font-black uppercase text-[10px] tracking-widest mb-6">Herramientas</h4>
                             <ul className="space-y-4 text-sm font-bold">
-                                <li><Link to="/cv-wizard" className="hover:text-cyan-600">Editor de CV</Link></li>
+                                <li><Link to="/login" className="hover:text-cyan-600">Editor de CV</Link></li>
                                 <li><Link to="/login" className="hover:text-cyan-600">Escáner ATS</Link></li>
                                 <li><Link to="/login" className="hover:text-cyan-600">Test Psicométrico</Link></li>
                             </ul>
