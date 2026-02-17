@@ -72,9 +72,11 @@ const LandingPage = () => {
             <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/80 backdrop-blur-xl border-b border-slate-200 py-4' : 'bg-transparent py-6'}`}>
                 <div className="container mx-auto px-6 flex items-center justify-between">
                     <Link to="/" className="flex items-center gap-3 group">
-                        <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:scale-110 transition-transform">
-                            <Globe className="text-white w-6 h-6" />
-                        </div>
+                        <img
+                            src="/logo-new.png"
+                            alt="Puentes Globales Logo"
+                            className="w-10 h-10 object-contain group-hover:scale-110 transition-transform"
+                        />
                         <span className="text-2xl font-black tracking-tighter uppercase">
                             Puentes<span className="text-cyan-400">Globales</span>
                         </span>
@@ -286,7 +288,9 @@ const LandingPage = () => {
                         <Link to="/login" className="px-16 py-6 bg-slate-900 text-white rounded-[2rem] font-black text-2xl hover:bg-slate-800 transition-all shadow-2xl transform hover:-translate-y-2">
                             Crear cuenta gratis ahora
                         </Link>
-                        <p className="text-sm font-bold text-slate-400">Sin tarjeta de crédito • 3 minutos • Acceso inmediato</p>
+                        <p className="text-xs font-bold text-slate-400 max-w-md">
+                            Al registrarte, permites que usemos tus datos para que, en caso de que una empresa se interese en tu perfil, puedan contactarte directamente por estas herramientas. Sin tarjeta de crédito • 3 minutos • Acceso inmediato
+                        </p>
                     </div>
                 </div>
             </section>
@@ -296,7 +300,7 @@ const LandingPage = () => {
                 <div className="container mx-auto px-6">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
                         <div className="col-span-2 space-y-6">
-                            <span className="text-2xl font-black text-slate-900/50 tracking-tighter uppercase">Puentes<span className="text-cyan-600">Globales</span></span>
+                            <img src="/logo-new.png" alt="Puentes Globales Logo" className="h-20 w-auto object-contain" />
                             <p className="max-w-sm font-medium">Arquitectura de carrera diseñada para el profesional del siglo XXI. Rompiendo las barreras del reclutamiento tradicional con tecnología y honestidad.</p>
                         </div>
                         <div>

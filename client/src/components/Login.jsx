@@ -135,9 +135,7 @@ export default function Login() {
                 className="bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800 relative z-10"
             >
                 <div className="flex justify-center mb-6">
-                    <div className="w-16 h-16 bg-cyan-600/20 rounded-2xl flex items-center justify-center border border-cyan-500/20">
-                        <Globe className="text-cyan-400 w-8 h-8" />
-                    </div>
+                    <img src="/logo-new.png" alt="Puentes Globales Logo" className="w-16 h-16 object-contain" />
                 </div>
 
                 <h1 className="text-3xl font-bold text-white mb-2 text-center tracking-tight">
