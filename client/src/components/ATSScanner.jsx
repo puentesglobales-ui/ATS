@@ -178,34 +178,66 @@ const ATSScanner = ({ session }) => {
                                 </p>
                             </div>
 
-                            {/* THE GATE: Recommendations (LOCKED) */}
-                            <div className="space-y-6 pt-8 border-t border-slate-100 relative">
-                                <div className="flex items-center justify-between mb-2">
-                                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Plan de Optimización</h4>
-                                    <span className="text-[8px] font-black bg-slate-100 px-2 py-0.5 rounded text-slate-500">PREMIUM FEATURE</span>
-                                </div>
-
-                                {/* BLURRED CONTENT */}
-                                <div className="space-y-4 opacity-10 blur-md pointer-events-none select-none">
-                                    <div className="bg-slate-800 p-4 rounded-2xl h-12 w-full"></div>
-                                    <div className="bg-slate-800 p-4 rounded-2xl h-24 w-full"></div>
-                                    <div className="bg-slate-800 p-4 rounded-2xl h-12 w-full"></div>
-                                </div>
-
-                                {/* GATE OVERLAY */}
-                                <div className="absolute inset-x-0 bottom-0 top-[3rem] flex flex-col items-center justify-center bg-white/60 backdrop-blur-sm p-6 text-center">
-                                    <div className="w-16 h-16 bg-cyan-600/10 rounded-2xl flex items-center justify-center text-cyan-600 mb-4">
-                                        <ShieldCheck size={32} />
-                                    </div>
-                                    <h5 className="text-lg font-black text-slate-900 mb-2">Consejos de Mejora Bloqueados</h5>
-                                    <p className="text-xs text-slate-500 mb-6 max-w-[250px] font-medium">
-                                        El algoritmo ha identificado <span className="text-slate-900">keywords faltantes</span> y fallos de formato, pero las recomendaciones son exclusivas de Alex IA.
+                            {/* RESULTS BREAKDOWN */}
+                            <div className="space-y-6 pt-8 border-t border-slate-100">
+                                <div>
+                                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">Análisis del Reclutador</h4>
+                                    <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                                        {result.summary}
                                     </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-rose-50/50 border border-rose-100 p-6 rounded-3xl">
+                                        <h5 className="text-[10px] font-black uppercase text-rose-600 tracking-widest mb-4 flex items-center gap-2">
+                                            <X size={12} /> Keywords Faltantes
+                                        </h5>
+                                        <div className="flex flex-wrap gap-2">
+                                            {result.hard_skills_analysis?.missing_keywords?.map((word, i) => (
+                                                <span key={i} className="px-3 py-1 bg-white border border-rose-200 text-rose-700 text-[10px] font-bold rounded-lg shadow-sm">
+                                                    {word}
+                                                </span>
+                                            ))}
+                                            {(!result.hard_skills_analysis?.missing_keywords || result.hard_skills_analysis?.missing_keywords.length === 0) && (
+                                                <span className="text-xs text-slate-400 italic">No se detectaron brechas críticas.</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-emerald-50/50 border border-emerald-100 p-6 rounded-3xl">
+                                        <h5 className="text-[10px] font-black uppercase text-emerald-600 tracking-widest mb-4 flex items-center gap-2">
+                                            <CheckCircle size={12} /> Puntos Fuertes
+                                        </h5>
+                                        <div className="flex flex-wrap gap-2">
+                                            {result.hard_skills_analysis?.matched_keywords?.map((word, i) => (
+                                                <span key={i} className="px-3 py-1 bg-white border border-emerald-200 text-emerald-700 text-[10px] font-bold rounded-lg shadow-sm">
+                                                    {word}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">Plan de Acción Inmediato</h4>
+                                    <div className="space-y-3">
+                                        {result.improvement_plan?.map((step, i) => (
+                                            <div key={i} className="flex gap-4 items-start bg-white border border-slate-200 p-4 rounded-2xl shadow-sm group hover:border-cyan-600 transition-colors">
+                                                <div className="w-6 h-6 bg-slate-900 text-white text-[10px] font-black flex items-center justify-center rounded-lg flex-shrink-0 mt-0.5 group-hover:bg-cyan-600">
+                                                    {i + 1}
+                                                </div>
+                                                <p className="text-sm text-slate-700 font-medium">{step}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="pt-6">
                                     <a
                                         href="https://wa.me/your-number-here"
-                                        className="px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-slate-900/20 flex items-center gap-3"
+                                        className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-3"
                                     >
-                                        <MessageCircle size={14} /> Desbloquear con Alex
+                                        <MessageCircle size={14} /> Consultar a Alex Coach (WhatsApp)
                                     </a>
                                 </div>
                             </div>

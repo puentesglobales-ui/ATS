@@ -54,56 +54,91 @@ const PERSONAS = {
     `
 };
 
-// --- Main Text Generation Function ---
+// --- Main Logic Router (Complexity & Fallbacks) ---
+
+/**
+ * generateResponse: Simplified chat response for standard personas.
+ */
 async function generateResponse(userMessage, personaKeyOrPrompt = 'RECRUITER_ALLY', history = []) {
+    let systemPrompt = PERSONAS[personaKeyOrPrompt] || personaKeyOrPrompt;
+    try {
+        const result = await routeRequest({
+            prompt: userMessage,
+            system_instruction: systemPrompt
+        });
+        return result.text;
+    } catch (error) {
+        return "I'm having trouble connecting. Could you repeat that?";
+    }
+}
+
+/**
+ * routeRequest: High-level orchestral function for complex tasks.
+ * Signature matches careerCoach and psychometricService expectations.
+ */
+async function routeRequest(config = {}, options = {}) {
+    const { prompt, complexity = 'medium', system_instruction = null, providerOverride = 'auto' } = config;
+
+    // Choose primary provider based on complexity or override
+    // For 'hard' complexity, we prefer Gemini 1.5 Pro if available, or just Gemini Flash as stable base.
+
     let responseText = null;
 
-    // Determine System Prompt
-    let systemPrompt = PERSONAS[personaKeyOrPrompt] || personaKeyOrPrompt;
-
-    // 1. Try GEMINI 1.5 FLASH (Standard Stability)
     try {
-        if (GENAI_API_KEY) {
-            responseText = await callGeminiFlash(userMessage, systemPrompt, history);
+        // 1. Try Primary (Gemini)
+        if (GENAI_API_KEY && (providerOverride === 'auto' || providerOverride === 'google')) {
+            responseText = await callGeminiFlash(prompt, system_instruction || "You are a helpful AI.", [], options);
         }
     } catch (error) {
-        console.error("❌ Gemini Flash Error:", error.message);
+        console.error("❌ routeRequest Primary Fail:", error.message);
     }
 
-    // 2. Fallback: DeepSeek (Cost effective) or ChatGPT (Reliable)
+    // 2. Fallbacks
     if (!responseText) {
-        console.log("⚠️ Falling back to Secondary AI Provider...");
         try {
-            if (DEEPSEEK_API_KEY) {
-                responseText = await callDeepSeek(userMessage, systemPrompt, history);
-            } else if (OPENAI_API_KEY) {
-                responseText = await callOpenAI(userMessage, systemPrompt, history);
+            if (DEEPSEEK_API_KEY && (providerOverride === 'auto' || providerOverride === 'deepseek')) {
+                responseText = await callDeepSeek(prompt, system_instruction, [], options);
+            } else if (OPENAI_API_KEY && (providerOverride === 'auto' || providerOverride === 'openai')) {
+                responseText = await callOpenAI(prompt, system_instruction, [], options);
             }
         } catch (error) {
-            console.error("❌ Secondary AI Error:", error.message);
+            console.error("❌ routeRequest Fallback Fail:", error.message);
         }
     }
 
-    return responseText || "I'm having trouble connecting. Could you repeat that?";
+    if (!responseText) throw new Error("AI Router failed to generate a response from any provider.");
+
+    return {
+        text: responseText,
+        source: responseText ? "ai_engine" : "none"
+    };
 }
 
 // --- Specific AI Implementations ---
 
-async function callGeminiFlash(message, systemPrompt, history) {
+async function callGeminiFlash(message, systemPrompt, history, options = {}) {
     if (!GENAI_API_KEY) return null;
 
     try {
         const genAI = new GoogleGenerativeAI(GENAI_API_KEY);
-        const model = genAI.getGenerativeModel({
+
+        // Handle JSON mode if requested (Gemini 1.5 supports it)
+        const modelConfig = {
             model: "gemini-1.5-flash",
             systemInstruction: systemPrompt
-        });
+        };
+
+        if (options.response_format && options.response_format.type === "json_object") {
+            modelConfig.generationConfig = { responseMimeType: "application/json" };
+        }
+
+        const model = genAI.getGenerativeModel(modelConfig);
 
         const chat = model.startChat({
             history: formatHistoryForGemini(history),
             generationConfig: {
-                maxOutputTokens: 1000,
-                temperature: 0.7,
+                maxOutputTokens: 2048,
+                temperature: options.temperature !== undefined ? options.temperature : 0.7,
             }
         });
 
@@ -116,40 +151,60 @@ async function callGeminiFlash(message, systemPrompt, history) {
     }
 }
 
-async function callOpenAI(message, systemPrompt, history) {
+async function callOpenAI(message, systemPrompt, history, options = {}) {
+    if (!OPENAI_API_KEY) return null;
+
     const messages = [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: systemPrompt || "You are a helpful assistant." },
         ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
         { role: "user", content: message }
     ];
 
-    const res = await axios.post('https://api.openai.com/v1/chat/completions', {
+    const payload = {
         model: "gpt-4o-mini",
         messages: messages,
-        max_tokens: 500
-    }, {
+        max_tokens: 1000,
+        temperature: options.temperature !== undefined ? options.temperature : 0.7
+    };
+
+    if (options.response_format) {
+        payload.response_format = options.response_format;
+    }
+
+    const res = await axios.post('https://api.openai.com/v1/chat/completions', payload, {
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${OPENAI_API_KEY}`
-        }
+        },
+        timeout: 30000
     });
 
     return res.data.choices[0].message.content;
 }
 
-async function callDeepSeek(message, systemPrompt, history) {
-    const res = await axios.post('https://api.deepseek.com/chat/completions', {
+async function callDeepSeek(message, systemPrompt, history, options = {}) {
+    if (!DEEPSEEK_API_KEY) return null;
+
+    const payload = {
         model: "deepseek-chat",
         messages: [
-            { role: "system", content: systemPrompt },
+            { role: "system", content: systemPrompt || "You are a helpful assistant." },
             ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
             { role: "user", content: message }
-        ]
-    }, {
+        ],
+        temperature: options.temperature !== undefined ? options.temperature : 1.0
+    };
+
+    if (options.response_format) {
+        payload.response_format = options.response_format;
+    }
+
+    const res = await axios.post('https://api.deepseek.com/chat/completions', payload, {
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-        }
+        },
+        timeout: 30000
     });
     return res.data.choices[0].message.content;
 }
@@ -200,5 +255,5 @@ async function generateAudio(text, voiceId = "gemini_standard") {
     return null; // Logic handled in index.js
 }
 
-module.exports = { generateResponse, generateAudio, PERSONAS, cleanTextForTTS };
+module.exports = { generateResponse, routeRequest, generateAudio, PERSONAS, cleanTextForTTS };
 

@@ -526,7 +526,7 @@ app.post('/api/analyze-cv', upload.single('cv'), async (req, res) => {
     console.error('CV Analysis Error:', error);
     res.status(500).json({ error: 'Analysis failed', details: error.message });
   } finally {
-    cleanup(cvFile.path);
+    if (cvFile && cvFile.path) cleanup(cvFile.path);
   }
 });
 

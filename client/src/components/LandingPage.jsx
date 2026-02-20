@@ -30,7 +30,7 @@ const LandingPage = () => {
             badge: "GRATIS",
             icon: <Sparkles className="text-cyan-400" />,
             color: "cyan",
-            link: "/login"
+            link: "/cv-builder"
         },
         {
             title: "Escáner ATS",
@@ -38,7 +38,7 @@ const LandingPage = () => {
             badge: "SCORE GRATIS",
             icon: <FileText className="text-blue-400" />,
             color: "blue",
-            link: "/login"
+            link: "/ats-scanner"
         },
         {
             title: "Test Psicométrico",
@@ -46,15 +46,15 @@ const LandingPage = () => {
             badge: "RESULTADO GRATIS",
             icon: <Brain className="text-purple-400" />,
             color: "purple",
-            link: "/login"
+            link: "/psychometric"
         },
         {
-            title: "Búsqueda Laboral",
-            desc: "Acceso a vacantes internacionales curadas por IA para tu perfil específico.",
-            badge: "ILIMITADO",
-            icon: <Search className="text-emerald-400" />,
+            title: "Simulador de Entrevista",
+            desc: "Entrena con una IA los escenarios más reales y recibe feedback profesional.",
+            badge: "PRO",
+            icon: <MessageCircle className="text-emerald-400" />,
             color: "emerald",
-            link: "/login"
+            link: "/interview"
         }
     ];
 

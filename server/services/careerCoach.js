@@ -79,45 +79,11 @@ class CareerCoach {
                 temperature: 0.2 // Low temp for factual analysis
             });
 
-            const fullAnalysis = JSON.parse(response.text);
+            // Clean response in case AI included markdown blocks
+            const cleanText = response.text.replace(/```json\n?|```/g, '').trim();
+            const fullAnalysis = JSON.parse(cleanText);
 
-            // --- FREEMIUM LOGIC: CENSORSHIP ---
-            if (userTier === 'free') {
-                return {
-                    score: fullAnalysis.score,
-                    match_level: fullAnalysis.match_level,
-                    summary: fullAnalysis.summary, // Hook: They see the summary
-
-                    // PARTIAL FEEDBACK (Hook)
-                    hard_skills_analysis: {
-                        score: fullAnalysis.hard_skills_analysis?.score,
-                        // Show only 2 missing keywords as teaser
-                        missing_keywords: fullAnalysis.hard_skills_analysis?.missing_keywords?.slice(0, 2) || [],
-                        total_missing: fullAnalysis.hard_skills_analysis?.missing_keywords?.length || 0,
-                        is_locked: true
-                    },
-
-                    // LOCKED SECTIONS
-                    experience_analysis: {
-                        score: fullAnalysis.experience_analysis?.score,
-                        feedback: "🔒 Upgrade to PRO to see detailed experience analysis.",
-                        is_locked: true
-                    },
-                    soft_skills_analysis: {
-                        score: fullAnalysis.soft_skills_analysis?.score,
-                        feedback: "🔒 Upgrade to PRO to see soft skills feedback.",
-                        is_locked: true
-                    },
-                    formatting_analysis: {
-                        score: fullAnalysis.formatting_analysis?.score,
-                        issues: ["🔒 Upgrade to unlock formatting audit."],
-                        is_locked: true
-                    },
-                    red_flags: fullAnalysis.red_flags?.slice(0, 1) || [], // Show 1 red flag only
-                    improvement_plan: ["🔒 Unlock the full Action Plan with PRO."]
-                };
-            }
-
+            // Returning full analysis for all users as they "pay with their data"
             return fullAnalysis;
 
         } catch (error) {
