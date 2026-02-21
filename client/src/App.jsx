@@ -99,16 +99,9 @@ function App() {
     if (!session) return <Navigate to="/login" />;
 
     const { is_student, payment_completed } = session.user.user_metadata || {};
-    if (is_student === false && !payment_completed) {
-      // If specifically Freemium User AND Unpaid -> Block
-      // But maybe we want to let them see Dashboard and block INSIDE tools?
-      // For now, let's keep blocking to be safe, or user will complain "Registros de pago mal"
-      // User said "Registros de pago... mal" maybe meaning he wants to see the tool first.
-      // Let's UNBLOCK dashboard for freemium, but block tools?
-      // To be safe, let's keep strict payment gate for now as per "is_student=false" logic, 
-      // but "Dashboard" might be exceptions?
-      // Let's stick to the rule: Freemium = Pay first. 
-      // If user wants "Data Capture -> Access", he gets "Register -> Pay -> Access".
+    const isMasterKey = session.user.email === 'visasytrabajos@gmail.com';
+
+    if (is_student === false && !payment_completed && !isMasterKey) {
       return <Navigate to="/payment-setup" />;
     }
 
@@ -130,16 +123,16 @@ function App() {
           {/* Tools */}
           <Route path="/ats-scanner" element={<ProtectedRoute><ATSScanner session={session} /></ProtectedRoute>} />
           <Route path="/interview" element={<ProtectedRoute><InterviewSimulator session={session} /></ProtectedRoute>} />
-          <Route path="/psychometric" element={<ProtectedRoute><PuentesAssessment /></ProtectedRoute>} />
+          <Route path="/psychometric" element={<ProtectedRoute><PuentesAssessment session={session} /></ProtectedRoute>} />
 
           {/* CEREBRO MAESTRO */}
-          <Route path="/cerebro" element={<ProtectedRoute><EtiquetadoDashboard /></ProtectedRoute>} />
+          <Route path="/cerebro" element={<ProtectedRoute><EtiquetadoDashboard session={session} /></ProtectedRoute>} />
 
-          <Route path="/cv-builder" element={<ProtectedRoute><CVBuilder /></ProtectedRoute>} />
-          <Route path="/cv-editor" element={<ProtectedRoute><CVEditor /></ProtectedRoute>} />
-          <Route path="/cv-wizard" element={<ProtectedRoute><CVWizard /></ProtectedRoute>} />
-          <Route path="/languages" element={<ProtectedRoute><LanguageSelector /></ProtectedRoute>} />
-          <Route path="/study" element={<ProtectedRoute><StudyPlan /></ProtectedRoute>} />
+          <Route path="/cv-builder" element={<ProtectedRoute><CVBuilder session={session} /></ProtectedRoute>} />
+          <Route path="/cv-editor" element={<ProtectedRoute><CVEditor session={session} /></ProtectedRoute>} />
+          <Route path="/cv-wizard" element={<ProtectedRoute><CVWizard session={session} /></ProtectedRoute>} />
+          <Route path="/languages" element={<ProtectedRoute><LanguageSelector session={session} /></ProtectedRoute>} />
+          <Route path="/study" element={<ProtectedRoute><StudyPlan session={session} /></ProtectedRoute>} />
 
 
           {/* Utility Routes */}
@@ -150,7 +143,7 @@ function App() {
           } />
 
           <Route path="/admin" element={<ProtectedRoute><AdminDashboard session={session} /></ProtectedRoute>} />
-          <Route path="/payment-setup" element={<ProtectedRoute><PaymentSetup /></ProtectedRoute>} />
+          <Route path="/payment-setup" element={<ProtectedRoute><PaymentSetup session={session} /></ProtectedRoute>} />
 
           <Route path="/" element={<LandingPage />} />
         </Routes>

@@ -1,13 +1,15 @@
 import axios from 'axios';
 
 const getBaseUrl = () => {
-    // FORCE HARDCODED URL FOR PRODUCTION TO AVOID ENV VAR ISSUES
-    if (import.meta.env.PROD) {
-        // Fallback actualizado al servidor real confirmado por el usuario
+    // If we are NOT on localhost, we should use the cloud backend anyway
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+    if (import.meta.env.PROD || !isLocal) {
+        // Fallback al servidor real confirmado por el usuario
         return import.meta.env.VITE_API_URL || 'https://ats-backend-l95k.onrender.com/api';
     }
 
-    // Localhost fallback
+    // Localhost fallback solo si estamos físicamente en la máquina local
     return 'http://localhost:3000/api';
 };
 

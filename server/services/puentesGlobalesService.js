@@ -13,30 +13,53 @@ class PuentesGlobalesEngine {
         });
     }
 
+    // Helper para parseo seguro
+    _safeParse(text) {
+        try {
+            const clean = text.replace(/```json\n?|```/g, '').trim();
+            return JSON.parse(clean);
+        } catch (e) {
+            console.error("Failed to parse AI JSON:", text);
+            // Intento desesperado: buscar el primer '{' y el último '}'
+            const start = text.indexOf('{');
+            const end = text.lastIndexOf('}');
+            if (start !== -1 && end !== -1) {
+                try {
+                    return JSON.parse(text.substring(start, end + 1));
+                } catch (e2) { return { error: "Parse failed" }; }
+            }
+            return { error: "Parse failed", raw: text };
+        }
+    }
+
     // PASO 1: Analizar CV + Puesto y generar el set de preguntas adaptativas
     async initializeAssessment(cvText, jobTitle) {
         const prompt = `
-      CONTEXTO: Eres un reclutador senior de Puentes Globales.
-      INPUT: CV del candidato: ${cvText}. Puesto al que aplica: ${jobTitle}.
+      **IDENTIDAD:** Reclutador Senior y Psicólogo Organizacional de Puentes Globales.
+      **CONTEXTO:** Analiza el CV del candidato (${cvText.slice(0, 1000)}) y la vacante (${jobTitle}).
       
-      TAREA:
-      1. Define 5 rasgos psicométricos críticos para este puesto (ej: Extraversión para ventas).
-      2. Genera un banco de 20 preguntas (Likert 1-5).
-      3. Incluye 3 preguntas de control (Lie Score) camufladas.
+      **TAREA:**
+      1. Identifica los 5 rasgos de personalidad/comportamiento más críticos para tener éxito en este rol específico.
+      2. Crea un test psicométrico adaptativo de 15 preguntas tipo Likert (1: Totalmente en desacuerdo, 5: Totalmente de acuerdo).
+      3. Las preguntas deben ser sutiles, no directas (ej: en lugar de "¿Eres puntual?", usar "Prefiero entregar mis tareas con antelación aunque no sean perfectas").
+      4. Incluye 3 "Lie Control Questions" para detectar deseabilidad social (intentar parecer mejor de lo que uno es).
       
-      REGLA: El output debe ser JSON puro y estructurado de Puentes Globales.
-      
-      FORMATO JSON:
+      **FORMATO JSON REQUERIDO:**
       {
-        "role_profile": { "trait_name": weight_0_to_1 },
+        "role_profile": { "trait_name": decimal_weight_from_0_to_1 },
         "questions": [
-          { "id": "q1", "text": "Pregunta...", "trait": "trait_name", "direction": "positive/reverse" }
+          { 
+            "id": "q1", 
+            "text": "Escribe aquí la pregunta en español profesional...", 
+            "trait": "trait_name_matching_profile", 
+            "direction": "positive" | "reverse" 
+          }
         ]
       }
     `;
 
         const result = await this.model.generateContent(prompt);
-        return JSON.parse(result.response.text());
+        return this._safeParse(result.response.text());
     }
 
     // PASO 2: Calcular resultados (Matemática pura, stateless)
@@ -106,7 +129,7 @@ class PuentesGlobalesEngine {
     `;
 
         const result = await this.model.generateContent(prompt);
-        return JSON.parse(result.response.text());
+        return this._safeParse(result.response.text());
     }
 }
 

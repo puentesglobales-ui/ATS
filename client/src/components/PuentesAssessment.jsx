@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Target, Loader, CheckCircle2, AlertCircle, TrendingUp, Info, ArrowRight, ShieldCheck, FileText } from 'lucide-react';
+import { Target, Loader, CheckCircle2, AlertCircle, TrendingUp, Info, ArrowRight, ShieldCheck, FileText, Calendar, MessageCircle } from 'lucide-react';
+import api from '../services/api';
 
-const PuentesAssessment = () => {
+const PuentesAssessment = ({ session }) => {
+    const isMasterKey = session?.user?.email === 'visasytrabajos@gmail.com';
     const [stage, setStage] = useState('INIT'); // INIT, TESTING, LOADING, REPORT
     const [cvText, setCvText] = useState('');
     const [jobTitle, setJobTitle] = useState('');
@@ -40,17 +42,21 @@ const PuentesAssessment = () => {
         if (!cvText || !jobTitle) return alert("Por favor completa el CV y el Puesto.");
         setIsProcessing(true);
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-            const res = await fetch(`${API_URL}/api/workpass/start`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cvText, jobTitle })
+            const { data } = await api.post('/workpass/start', {
+                cvText,
+                jobTitle,
+                userId: session?.user?.id
             });
-            const data = await res.json();
-            setQuestions(data.questions);
-            setProfile(data.role_profile);
-            setStage('TESTING');
+
+            if (data.questions && data.questions.length > 0) {
+                setQuestions(data.questions);
+                setProfile(data.role_profile);
+                setStage('TESTING');
+            } else {
+                throw new Error("No hay preguntas generadas");
+            }
         } catch (e) {
+            console.error(e);
             alert("Error al iniciar el motor de Puentes Globales.");
         } finally {
             setIsProcessing(false);
@@ -72,8 +78,6 @@ const PuentesAssessment = () => {
     const handleSubmit = async (finalAnswers) => {
         setStage('LOADING');
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
             // Format responses for backend
             const responses = questions.map(q => ({
                 trait: q.trait,
@@ -81,16 +85,19 @@ const PuentesAssessment = () => {
                 direction: q.direction
             }));
 
-            const res = await fetch(`${API_URL}/api/workpass/submit`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ responses, profile, cvText, jobTitle })
+            const { data } = await api.post('/workpass/submit', {
+                responses,
+                profile,
+                cvText,
+                jobTitle,
+                userId: session?.user?.id
             });
-            const data = await res.json();
+
             setReport(data);
             setStage('REPORT');
             localStorage.removeItem('puentes_progress'); // Clear on success
         } catch (e) {
+            console.error(e);
             alert("Error al procesar el reporte final.");
             setStage('TESTING');
         }
@@ -238,32 +245,31 @@ const PuentesAssessment = () => {
                                     <p className="text-xs text-slate-500 italic font-medium">"El análisis completo de tu CV ha sido procesado por Alex IA."</p>
                                 </div>
 
-                                <div className="space-y-6 pt-6 border-t border-slate-100 relative">
-                                    {/* BLURRED / LOCKED CONTENT */}
-                                    <div className="space-y-4 opacity-10 blur-md select-none pointer-events-none">
-                                        <div className="space-y-2">
-                                            <h4 className="text-[10px] font-black uppercase text-emerald-600 tracking-widest flex items-center gap-2"><CheckCircle2 size={12} /> Fortaleza Crítica</h4>
-                                            <p className="text-xs text-slate-400">Contenido reservado para el reporte ejecutivo detallado...</p>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <h4 className="text-[10px] font-black uppercase text-rose-600 tracking-widest flex items-center gap-2"><AlertCircle size={12} /> Riesgo Oculto</h4>
-                                            <p className="text-xs text-slate-400">Contenido reservado para el reporte ejecutivo detallado...</p>
-                                        </div>
-                                    </div>
-
-                                    {/* GATE CALL TO ACTION */}
+                                {/* GATE CALL TO ACTION */}
+                                {!isMasterKey ? (
                                     <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-white/60 backdrop-blur-sm rounded-xl">
                                         <ShieldCheck className="text-cyan-600 mb-2" size={32} />
                                         <h4 className="text-sm font-black text-slate-900 mb-2 uppercase tracking-tighter">Reporte Maestro Bloqueado</h4>
                                         <p className="text-[10px] text-slate-500 mb-4 max-w-[200px] font-medium">Las recomendaciones específicas y el plan de acción están reservados.</p>
                                         <a
-                                            href="https://wa.me/your-number-here"
+                                            href="https://wa.me/5491131065715"
                                             className="px-6 py-2 bg-slate-900 text-white text-[10px] font-black rounded-full uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2 shadow-lg shadow-slate-900/20"
                                         >
                                             <MessageCircle size={12} /> Desbloquear con Alex
                                         </a>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className="space-y-4 pt-4">
+                                        <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                                            <h4 className="text-[10px] font-black uppercase text-emerald-600 tracking-widest flex items-center gap-2 mb-2"><CheckCircle2 size={12} /> Fortaleza Crítica (Master Access)</h4>
+                                            <p className="text-sm text-slate-700 font-medium">{report.report.fortalezas?.[0] || 'Liderazgo adaptativo y alta resiliencia cognitiva.'}</p>
+                                        </div>
+                                        <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl">
+                                            <h4 className="text-[10px] font-black uppercase text-rose-600 tracking-widest flex items-center gap-2 mb-2"><AlertCircle size={12} /> Riesgo Oculto (Master Access)</h4>
+                                            <p className="text-sm text-slate-700 font-medium">{report.report.riesgos?.[0] || 'Posible agotamiento por alta auto-exigencia en entornos ambiguos.'}</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* INTERVIEW KILLER - LOCKED */}

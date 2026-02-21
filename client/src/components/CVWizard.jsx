@@ -8,7 +8,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
-const CVWizard = () => {
+const CVWizard = ({ session }) => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -37,7 +37,10 @@ const CVWizard = () => {
         if (step === 1 && data.jobDescription) {
             setLoading(true);
             try {
-                const res = await api.post('/cv-wizard/1', { jobDescription: data.jobDescription });
+                const res = await api.post('/cv-wizard/1', {
+                    jobDescription: data.jobDescription,
+                    userId: session?.user?.id
+                });
                 setAnalysis(prev => ({ ...prev, jd: res.data }));
                 setStep(2);
             } catch (err) { alert("Error analizando la vacante"); }
@@ -48,7 +51,8 @@ const CVWizard = () => {
             try {
                 const res = await api.post('/cv-wizard/2', {
                     currentProfile: { role: data.currentRole, years: data.yearsExp, english: data.englishLevel },
-                    jdAnalysis: analysis.jd
+                    jdAnalysis: analysis.jd,
+                    userId: session?.user?.id
                 });
                 setAnalysis(prev => ({ ...prev, gap: res.data }));
                 setStep(3);
@@ -60,13 +64,29 @@ const CVWizard = () => {
         else if (step === 5) {
             setLoading(true);
             try {
-                const res = await api.post('/cv-wizard/4', {
+                // First call step 4 to build impacts
+                const resImpact = await api.post('/cv-wizard/4', {
                     structuredExperience: data.rawExperience,
-                    accomplishments: data.accomplishments
+                    accomplishments: data.accomplishments,
+                    userId: session?.user?.id
                 });
+
+                // Then call step 5 for final generation
+                const resFinal = await api.post('/cv-wizard/5', {
+                    fullData: {
+                        ...data,
+                        impactExperiences: resImpact.data.impactExperiences,
+                        jdAnalysis: analysis.jd
+                    },
+                    userId: session?.user?.id
+                });
+
                 // Final redirect to editor with full data
-                navigate('/cv-builder', { state: { ...data, ...analysis, finalAnalysis: res.data } });
-            } catch (err) { alert("Error procesando logros"); }
+                navigate('/cv-builder', { state: { ...data, ...analysis, finalAnalysis: resFinal.data } });
+            } catch (err) {
+                console.error(err);
+                alert("Error finalizando el CV");
+            }
             finally { setLoading(false); }
         }
         else {
@@ -105,8 +125,8 @@ const CVWizard = () => {
                     {step === 1 && (
                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
                             <div className="space-y-2">
-                                <h1 className="text-4xl font-black tracking-tighter">¿Cuál es el <span className="text-cyan-400">Puesto Ideal</span>?</h1>
-                                <p className="text-slate-400 font-medium">No la Ferrari... sino enseñarles a manejar. Empezamos por el destino.</p>
+                                <h1 className="text-4xl font-black tracking-tighter">Define tu <span className="text-cyan-400">Meta Profesional</span></h1>
+                                <p className="text-slate-400 font-medium">Para optimizar tu CV, necesitamos entender exactamente qué tipo de vacante estás buscando.</p>
                             </div>
 
                             <div className="bg-slate-900/50 border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl space-y-6 backdrop-blur-sm">
@@ -139,8 +159,8 @@ const CVWizard = () => {
                     {step === 2 && (
                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
                             <div className="space-y-2">
-                                <h1 className="text-4xl font-black tracking-tighter">¿Dónde estás <span className="text-purple-400">hoy</span>?</h1>
-                                <p className="text-slate-400">Detectamos la brecha para saber qué "vender" en el CV.</p>
+                                <h1 className="text-4xl font-black tracking-tighter">Analizando el <span className="text-purple-400">Match</span></h1>
+                                <p className="text-slate-400 font-medium">Comparamos tu perfil actual con los requisitos para detectar brechas críticas.</p>
                             </div>
 
                             {analysis.jd && (
@@ -181,8 +201,8 @@ const CVWizard = () => {
                     {step === 3 && (
                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
                             <div className="space-y-2">
-                                <h1 className="text-4xl font-black tracking-tighter">Contame <span className="text-emerald-400">Tu Historia</span></h1>
-                                <p className="text-slate-400">Sin pensar en el CV. Hablale a una persona, no a un sistema.</p>
+                                <h1 className="text-4xl font-black tracking-tighter">Tu <span className="text-emerald-400">Trayectoria Relevante</span></h1>
+                                <p className="text-slate-400 font-medium">Describe tu experiencia de forma narrativa. Menciona tus responsabilidades clave y el contexto de tu trabajo.</p>
                             </div>
 
                             {analysis.gap && (
@@ -207,8 +227,8 @@ const CVWizard = () => {
                     {step === 4 && (
                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
                             <div className="space-y-2">
-                                <h1 className="text-4xl font-black tracking-tighter">¿Qué <span className="text-yellow-400">Cambio</span> por Vos?</h1>
-                                <p className="text-slate-400">Acá es donde ganamos la entrevista. Buscamos impacto, no tareas.</p>
+                                <h1 className="text-4xl font-black tracking-tighter">Logros e <span className="text-yellow-400">Impacto Cuantificable</span></h1>
+                                <p className="text-slate-400 font-medium">Este es el corazón de un CV de alto rendimiento. Enfócate en resultados, no solo en tareas.</p>
                             </div>
 
                             <div className="grid gap-4">
@@ -243,7 +263,7 @@ const CVWizard = () => {
                             </div>
 
                             <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-[10px] text-slate-500 font-mono tracking-widest uppercase">
-                                Pipeline: Extraction -> Gap Analysis -> Impact Builder -> ATS Review
+                                Pipeline: Extraction → Gap Analysis → Impact Builder → ATS Review
                             </div>
                         </motion.div>
                     )}

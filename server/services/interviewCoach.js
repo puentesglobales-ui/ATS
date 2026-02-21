@@ -81,8 +81,8 @@ class InterviewCoach {
         `;
     }
 
-    async getInterviewResponse(chatHistory, cvText, jobDescription, mode = 'ALLY') {
-        const systemPrompt = this.generateSystemPrompt(cvText, jobDescription, mode);
+    async getInterviewResponse(chatHistory, cvText, jobDescription, mode = 'ALLY', userLang = 'en', userLevel = 'B2') {
+        const systemPrompt = this.generateSystemPrompt(cvText, jobDescription, mode, userLang, userLevel);
 
         // We need JSON output, and `aiRouter.generateResponse` usually returns text.
         // However, we instructed the model to return JSON in the system prompt.
@@ -107,7 +107,9 @@ class InterviewCoach {
             console.error("Interview Coach Error / JSON Parse:", error);
             // Fallback object
             return {
-                dialogue: "I'm having a bit of trouble connecting to my feedback matrix. Let's continue. Tell me more.",
+                dialogue: userLang === 'es'
+                    ? "Tengo problemas para conectar con mi matriz de feedback. Continuemos. Cuéntame más."
+                    : "I'm having a bit of trouble connecting to my feedback matrix. Let's continue. Tell me more.",
                 feedback: null,
                 stage: "ERROR_RECOVERY"
             };

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, ArrowRight, CheckCircle, BarChart2, Brain, Activity, User, Briefcase, Play, Loader } from 'lucide-react';
 import { PSYCHOMETRIC_QUESTIONS } from '../data/psychometricQuestions';
+import api from '../services/api';
 import { Chart as ChartJS, RadialLinearScale, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 import { Radar, Bar } from 'react-chartjs-2';
 
@@ -95,7 +96,7 @@ const QuestionBlock = ({ questions, prefix, onAnswer, onComplete, instruction })
     );
 };
 
-const PsychometricTest = () => {
+const PsychometricTest = ({ session }) => {
     const [stage, setStage] = useState(STAGES.INPUT);
     const [userData, setUserData] = useState({ cvText: '', jobDescription: '' });
     const [answers, setAnswers] = useState({});
@@ -119,13 +120,13 @@ const PsychometricTest = () => {
     const submitTest = async () => {
         setStage(STAGES.LOADING);
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-            const response = await fetch(`${API_URL}/api/psychometric/submit`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ answers, userData })
+            const { data } = await api.post('/psychometric/submit', {
+                answers,
+                userData: {
+                    ...userData,
+                    userId: session?.user?.id
+                }
             });
-            const data = await response.json();
             setResults(data);
             setStage(STAGES.RESULTS);
         } catch (error) {

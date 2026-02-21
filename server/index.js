@@ -646,6 +646,17 @@ app.post('/api/cv-wizard/:step', async (req, res) => {
 
     const result = await cvWizardEngine.processWizardStep(step, data);
 
+    // PERSISTENCE: Save Step Progress for recovery
+    if (userId && supabaseAdmin) {
+      try {
+        await supabaseAdmin.from('analysis_logs').insert([{
+          user_id: userId,
+          feature_type: `cv_wizard_step_${step}`,
+          metadata: { step, input: data, output: result, timestamp: new Date().toISOString() }
+        }]);
+      } catch (e) { console.warn("Log failed:", e.message); }
+    }
+
     // If it's the final generation step, decrement credit
     if (parseInt(step) === 5 && userId && supabaseAdmin) {
       await supabaseAdmin.rpc('decrement_credit', { p_user_id: userId, p_type: 'ats' });
@@ -722,15 +733,25 @@ app.post('/api/workpass/submit', async (req, res) => {
 const interviewCoach = require('./services/interviewCoach');
 
 app.post('/api/interview/start', async (req, res) => {
-  const { cvText, jobDescription, mode } = req.body;
+  const { cvText, jobDescription, mode, userId, language } = req.body;
 
   if (!cvText || !jobDescription) {
     return res.status(400).json({ error: 'Missing CV or Job Description' });
   }
 
   try {
-    const responseObj = await interviewCoach.getInterviewResponse([], cvText, jobDescription, mode);
-    // V2: responseObj is { dialogue, feedback, stage }
+    const userLang = language || 'en';
+    const responseObj = await interviewCoach.getInterviewResponse([], cvText, jobDescription, mode, userLang);
+
+    // SAVE TO LOGS (Persistence)
+    if (userId && supabaseAdmin) {
+      await supabaseAdmin.from('analysis_logs').insert([{
+        user_id: userId,
+        feature_type: 'interview_start',
+        metadata: { mode, jobDescription: jobDescription.slice(0, 100) }
+      }]);
+    }
+
     res.json({ message: responseObj.dialogue, feedback: responseObj.feedback, stage: responseObj.stage });
   } catch (error) {
     console.error('Interview Start Error:', error);
@@ -739,11 +760,13 @@ app.post('/api/interview/start', async (req, res) => {
 });
 
 app.post('/api/interview/chat', async (req, res) => {
-  const { messages, cvText, jobDescription, mode } = req.body;
+  const { messages, cvText, jobDescription, mode, userId, language } = req.body;
 
   try {
-    const responseObj = await interviewCoach.getInterviewResponse(messages, cvText, jobDescription, mode);
-    // V2: responseObj is { dialogue, feedback, stage }
+    const userLang = language || 'en';
+    const responseObj = await interviewCoach.getInterviewResponse(messages, cvText, jobDescription, mode, userLang);
+
+    // Update credits/usage if needed
     res.json({ message: responseObj.dialogue, feedback: responseObj.feedback, stage: responseObj.stage });
   } catch (error) {
     console.error('Interview Chat Error:', error);
@@ -776,10 +799,22 @@ app.post('/api/psychometric/submit', async (req, res) => {
       scores
     );
 
-    // 3. Save to DB (Optional / Async)
+    // 3. Save to DB (Persistence)
     if (userData.userId && supabaseAdmin) {
-      // ... (Insert into psychometric_evaluations logic) ...
-      // Simplified for MVP speed: Just return JSON first
+      try {
+        await supabaseAdmin.from('psychometric_evaluations').insert([{
+          user_id: userData.userId,
+          job_title: userData.jobDescription ? userData.jobDescription.slice(0, 100) : "General",
+          dass_scores: scores.dass,
+          flow_scores: scores.flow,
+          big5_scores: scores.big5,
+          match_score: aiReport.fit_score || 0,
+          ai_analysis: aiReport
+        }]);
+        console.log(`✅ Saved psychometric evaluation for ${userData.userId}`);
+      } catch (dbErr) {
+        console.warn("DB Psychometric Save Error:", dbErr.message);
+      }
     }
 
     res.json({

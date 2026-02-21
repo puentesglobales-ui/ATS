@@ -86,31 +86,31 @@ class CareerCoach {
             // Force score to be a Number
             if (fullAnalysis.score) fullAnalysis.score = Number(fullAnalysis.score);
 
-            // --- FUNNEL LOGIC (The Hook) ---
-            // We give them the score and tell them they have high potential, 
-            // but we lock the "HOW" to force the conversion to a call.
+            // --- FUNNEL LOGIC (Improved for Transparency & Conversion) ---
+            // We show the match and the gaps, but emphasize the CALL as the solution.
 
-            const encouragingSummary = `¡Excelente potencial detectado! Tu perfil tiene una base sólida pero le falta el 'Ajuste de Élite' para ser irresistible para los reclutadores de ${jobDescription.slice(0, 50)}...`;
+            const hasGaps = (fullAnalysis.hard_skills_analysis?.missing_keywords || []).length > 0;
+            const callCTA = "\n\n💡 RECOMENDACIÓN: Para corregir estas brechas de inmediato, te sugerimos agendar una sesión estratégica gratuita.";
 
             const funnelResponse = {
                 score: fullAnalysis.score,
                 match_level: fullAnalysis.score >= 50 ? "Alta Probabilidad" : "Potencial en Desarrollo",
-                summary: fullAnalysis.summary || encouragingSummary,
+                summary: (fullAnalysis.summary || "Análisis completado.") + (fullAnalysis.score < 85 ? callCTA : ""),
 
-                // Show what they HAVE right (Positive validation)
+                // Show actual data so the user (and admin) can see the REAL problem
                 hard_skills_analysis: {
                     matched_keywords: fullAnalysis.hard_skills_analysis?.matched_keywords || [],
-                    missing_keywords: ["🔒 Bloqueado: Agenda tu llamada para descubrir las keywords clave."],
-                    is_locked: true
+                    missing_keywords: fullAnalysis.hard_skills_analysis?.missing_keywords || [],
+                    is_locked: false // No longer locking, as per user feedback
                 },
 
-                // Lock the "Cure" (The Plan)
-                improvement_plan: [
-                    "🚀 Optimización de Logros de Impacto (Pendiente)",
-                    "🎯 Alineación de Keywords de Alta Conversión (Pendiente)",
-                    "💡 Sesión de Estrategia Personalizada sugerida."
+                // The Plan
+                improvement_plan: fullAnalysis.improvement_plan || [
+                    "🚀 Optimiza tus logros con métricas.",
+                    "🎯 Nivela tus keywords con la vacante."
                 ],
 
+                cta_url: "https://calendly.com/puentesglobales/agendar",
                 cta_type: "SCHEDULE_CALL",
                 cta_message: "Haz que este CV sea IRRESTISTIBLE. Agenda tu llamada estratégica ahora."
             };

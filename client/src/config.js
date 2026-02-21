@@ -2,10 +2,10 @@
 // Esta configuración tiene prioridad sobre las variables de entorno
 
 const config = {
-    // URL recuperada de mvp-idiomas-ai/mobile/services/supabase.js
+    // URL del proyecto Supabase
     supabaseUrl: "https://flsguqlmcqxyulkqmriu.supabase.co",
 
-    // Clave recuperada del proyecto móvil funcionando
+    // Clave Anon pública RESTAURADA para este proyecto
     supabaseKey: "sb_publishable_F2h4qlMjmDY0sb8D-t5adw_5l31usVM"
 };
 

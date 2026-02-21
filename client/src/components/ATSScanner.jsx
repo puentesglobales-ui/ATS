@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Upload, FileText, AlertTriangle, CheckCircle, XCircle, X,
-    Target, Sparkles, Loader, ShieldCheck, MessageCircle, ArrowRight
+    Target, Sparkles, Loader, ShieldCheck, MessageCircle, ArrowRight, Calendar
 } from 'lucide-react';
 import api from '../services/api';
 import { Navigate } from 'react-router-dom';
 
 const ATSScanner = ({ session }) => {
+    const isMasterKey = session?.user?.email === 'visasytrabajos@gmail.com';
+
     // 1. STRICT GATE: Redirect to Login if no session
     if (!session) {
         return <Navigate to="/login" />;
@@ -232,13 +234,28 @@ const ATSScanner = ({ session }) => {
                                     </div>
                                 </div>
 
-                                <div className="pt-6">
+                                <div className="pt-6 space-y-3">
+                                    {(result.score < 80 && !isMasterKey) && (
+                                        <a
+                                            href="https://calendly.com/puentesglobales/agendar"
+                                            className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-600/20 flex items-center justify-center gap-3"
+                                        >
+                                            <Calendar size={14} /> Agendar Llamada Estratégica (Gratis)
+                                        </a>
+                                    )}
+
                                     <a
-                                        href="https://wa.me/your-number-here"
+                                        href="https://wa.me/5491131065715"
                                         className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-3"
                                     >
                                         <MessageCircle size={14} /> Consultar a Alex Coach (WhatsApp)
                                     </a>
+
+                                    {isMasterKey && (
+                                        <div className="text-center p-2 bg-cyan-900/20 rounded-xl border border-cyan-500/30">
+                                            <span className="text-[10px] font-black text-cyan-400 uppercase">👑 Acceso Maestro: Reporte Completo Desbloqueado</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </motion.div>

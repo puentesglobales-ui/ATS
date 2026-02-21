@@ -6,10 +6,10 @@ import { Link } from 'react-router-dom';
 const Dashboard = ({ session }) => {
     const tools = [
         {
-            title: "Constructor de CV",
-            desc: "Crea un CV de alto impacto optimizado para Microsoft, Amazon y Google.",
+            title: "CV Wizard Pro",
+            desc: "Nuestro nuevo motor de generación de CV optimizado por IA paso a paso.",
             icon: <Sparkles className="w-8 h-8" />,
-            link: "/cv-builder",
+            link: "/cv-wizard",
             color: "cyan",
             bgColor: "bg-cyan-900/30",
             hoverBg: "group-hover:bg-cyan-600",

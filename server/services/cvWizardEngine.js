@@ -75,15 +75,20 @@ class CVWizardEngine {
     async extractRawExperience(data) {
         const { rawExperienceText } = data;
         const prompt = `
-        Convierte este relato informal de experiencia en una estructura profesional organizada.
-        NO me des bullets de CV aún. Solo organiza los hechos.
+        **ROL:** Analista de Trayectoria Profesional.
+        **TAREA:** Convierte el relato informal del usuario en una cronología de experiencia estructurada.
+        **OBJETIVO:** Extraer hechos, tecnologías usadas y responsabilidades sin adornos, para luego convertirlos en logros.
         
-        INPUT: "${rawExperienceText}"
+        RELATO: "${rawExperienceText}"
+        
+        **REGLAS:**
+        - Si no menciona fechas, usa "Fecha no proporcionada".
+        - Identifica las herramientas/lenguajes mencionados.
         
         Devuelve JSON:
         {
             "experiences": [
-                { "company": "", "role": "", "duration": "", "mainTasks": [] }
+                { "company": "Nombre", "role": "Cargo", "duration": "Periodo", "mainTasks": ["Tarea 1", "Tarea 2"], "tools": ["Tool1", "Tool2"] }
             ]
         }
         `;
@@ -95,16 +100,21 @@ class CVWizardEngine {
     async buildImpactStatements(data) {
         const { structuredExperience, accomplishments } = data;
         const prompt = `
-        Transforma las tareas y logros del usuario en Impact Statements usando la metodología STAR/Metric-First.
+        **ROL:** Estratega de Branding Personal.
+        **TAREA:** Transforma tareas y hitos en "Impact Statements" de alto rendimiento (STAR).
         
-        EXPERIENCIA: ${JSON.stringify(structuredExperience)}
+        DATOS ESTRUCTURADOS: ${JSON.stringify(structuredExperience)}
         LOGROS VERBALIZADOS: ${JSON.stringify(accomplishments)}
         
-        Cada logro debe comenzar con un Verbo de Acción fuerte y contener, si es posible, una métrica implícita o explícita.
+        **REGLAS DE ORO:**
+        1. Fórmula: [Verbo de Acción fuerte] + [Métrica/Resultado] + [Contexto/Herramienta].
+        2. Ej: "Optimicé el pipeline de CI/CD reduciendo fallos en un 30% usando GitHub Actions".
+        3. No uses "Ayude a" o "Fui parte de". Sé protagonista.
+        
         Devuelve JSON:
         {
             "impactExperiences": [
-                { "role": "", "company": "", "bullets": ["Logro 1 con métrica", "Logro 2 con impacto"] }
+                { "role": "", "company": "", "bullets": ["Bullet de impacto 1", "Bullet de impacto 2"] }
             ]
         }
         `;
