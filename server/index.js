@@ -497,7 +497,8 @@ app.post('/api/analyze-cv', upload.single('cv'), async (req, res) => {
       }
     }
 
-    const analysis = await careerCoach.analyzeCV(finalCvText, jobDescription, userTier);
+    const language = req.body.language || 'es';
+    const analysis = await careerCoach.analyzeCV(finalCvText, jobDescription, userTier, language);
 
     // 3. Save to Supabase (if userId provided)
     if (userId && supabaseAdmin) {

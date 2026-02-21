@@ -44,6 +44,8 @@ const ATSScanner = ({ session }) => {
                 formData.append('userId', session.user.id);
             }
 
+            formData.append('language', 'es');
+
             if (inputMode === 'pdf') {
                 formData.append('cv', file);
             } else {
@@ -235,7 +237,7 @@ const ATSScanner = ({ session }) => {
                                 </div>
 
                                 <div className="pt-6 space-y-3">
-                                    {(result.score < 80 && !isMasterKey) && (
+                                    {result.score < 80 && (
                                         <a
                                             href="https://calendly.com/puentesglobales/agendar"
                                             className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-600/20 flex items-center justify-center gap-3"

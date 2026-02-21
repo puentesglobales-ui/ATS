@@ -5,61 +5,47 @@ class CareerCoach {
         this.router = aiRouter;
     }
 
-    async analyzeCV(cvText, jobDescription, userTier = 'free') {
+    async analyzeCV(cvText, jobDescription, userTier = 'free', language = 'es') {
         if (!cvText || cvText.length < 50) throw new Error("CV text too short");
 
-        const systemPrompt = `
+        const isEsp = language === 'es';
+
+        const systemPrompt = isEsp ? `
+        **IDENTIDAD:**
+        Eres un **ATS (Sistema de Seguimiento de Candidatos)**. Realiza una evaluación técnica estricta.
+
+        **SCORING:**
+        - Hard Skills (40%), Experiencia (25%), Idiomas (10%), Educación (10%), Soft (10%), Formato (5%).
+
+        **UMBRALES:**
+        0-59: Rechazado | 60-79: Preseleccionado | 80-100: Aceptado.
+
+        **IMPORTANTE:** Tu análisis, sumario y plan de mejora deben estar 100% en ESPAÑOL.
+
+        **SALIDA (JSON ÚNICAMENTE):**
+        {
+            "score": Integer,
+            "match_level": "Aceptado" | "Preseleccionado" | "Rechazado",
+            "summary": "Justificación técnica en ESPAÑOL.",
+            "hard_skills_analysis": { "missing_keywords": [], "matched_keywords": [] },
+            "improvement_plan": ["Paso 1 en ESPAÑOL", "Paso 2..."]
+        }
+        ` : `
         **IDENTITY:**
-        You are a **Production-Grade ATS (Applicant Tracking System)**.
-        Your goal is to perform a strict, objective technical evaluation of a candidate based on a specific Job Description (JD).
-
-        **LOGIC MODULES:**
-        1. **Pre-processing:** Extract actionable data.
-        2. **Semantic Analysis:** Contextualize experience (e.g., "Used Python" vs "Mastered Python").
-        3. **Knockout Rules (Critical):** If the candidate lacks a MANDATORY requirement (e.g., specific language, years of experience, permit), they are **automatically 'Rechazado'** (Score < 60) regardless of other skills.
-
-        **SCORING ALGORITHM (Total: 100):**
-        - **Hard Skills (40%):** Technical stack match (Keywords + Context).
-        - **Experience (25%):** Relevance of roles and years of experience vs seniority required.
-        - **Languages (10%):** Proficiency level match.
-        - **Education (10%):** Degrees and certifications.
-        - **Soft Skills (10%):** Communication, leadership, inferred traits.
-        - **Format/ATS Compatibility (5%):** Structure, clarity, standard headings.
-
-        **DECISION THRESHOLDS:**
-        - **0 - 59:** "Rechazado" (Does not meet minimums).
-        - **60 - 79:** "Preseleccionado" (Good fit, some gaps).
-        - **80 - 100:** "Aceptado" (Strong match, ready for interview).
+        You are a **Production-Grade ATS**. Perform a strict evaluation.
 
         **OUTPUT FORMAT (JSON ONLY):**
         {
-            "score": Integer (0-100),
+            "score": Integer,
             "match_level": "Aceptado" | "Preseleccionado" | "Rechazado",
-            "summary": "Technical justification of the decision.",
-            "breakdown": {
-                "hard_skills": Integer (0-40),
-                "experience": Integer (0-25),
-                "languages": Integer (0-10),
-                "education": Integer (0-10),
-                "soft_skills": Integer (0-10),
-                "format": Integer (0-5)
-            },
-            "hard_skills_analysis": {
-                "missing_keywords": ["Critical Skill 1", "Skill 2"],
-                "matched_keywords": ["Skill A", "Skill B"]
-            },
-            "experience_analysis": {
-                "feedback": "Analysis of seniority and role relevance."
-            },
-            "killer_questions_check": {
-                "passed": Boolean,
-                "reason": "If failed, strictly explain which mandatory requirement was missed."
-            },
-            "improvement_plan": ["Specific step to move from 'Rechazado' to 'Preseleccionado' or 'Aceptado'"]
+            "summary": "Technical justification.",
+            "hard_skills_analysis": { "missing_keywords": [], "matched_keywords": [] },
+            "improvement_plan": []
         }
         `;
 
         const userPrompt = `
+        ${isEsp ? "[CRÍTICO: RESPONDE SIEMPRE EN ESPAÑOL. El resumen, las keywords y el plan deben estar en español.]" : ""}
         **JOB DESCRIPTION:**
         ${jobDescription.slice(0, 4000)}
 
