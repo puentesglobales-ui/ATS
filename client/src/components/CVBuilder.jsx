@@ -79,18 +79,10 @@ const CVBuilder = () => {
 
             setIsGenerating(true);
             try {
-                // Determine API URL (Use Vite env or default to localhost for dev)
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+                const response = await api.post('/generate-cv', wizardData);
 
-                const response = await fetch(`${API_URL}/api/generate-cv`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(wizardData) // { role, market, industry, ... }
-                });
-
-                if (!response.ok) throw new Error('Generation failed');
-
-                const data = await response.json();
+                // Assuming api.post returns data nested under data (axios behavior)
+                const data = response.data;
 
                 // Merge AI data with state
                 setCvData(prev => ({
@@ -176,19 +168,12 @@ const CVBuilder = () => {
 
         setIsOptimizing(true);
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-            const response = await fetch(`${API_URL}/api/ats-optimize`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userData: { ...wizardData, rawData: cvData },
-                    jobDescription
-                })
+            const response = await api.post('/ats-optimize', {
+                userData: { ...wizardData, rawData: cvData },
+                jobDescription
             });
 
-            if (!response.ok) throw new Error('ATS Optimization failed');
-
-            const result = await response.json();
+            const result = response.data;
             setAtsData(result);
             setCvData(result.optimized_content); // Inject optimized content
 
