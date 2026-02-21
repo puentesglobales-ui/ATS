@@ -82,8 +82,15 @@ class InterviewCoach {
         // Gemini Flash is good at following formats if instructed.
 
         try {
+            const isEsp = userLang.toLowerCase() === 'es';
             // Get raw response from Router (Gemini -> DeepSeek -> OpenAI)
-            const lastUserMessage = chatHistory.length > 0 ? chatHistory[chatHistory.length - 1].content : "Hello";
+            const baseUserMessage = chatHistory.length > 0 ? chatHistory[chatHistory.length - 1].content : "Hola";
+
+            // AGGRESSIVE TRICK: Prepend Spanish instruction to EVERY user message so Gemini can't ignore it
+            const lastUserMessage = isEsp
+                ? `[CRÍTICO: RESPONDE SIEMPRE EN ESPAÑOL] ${baseUserMessage}`
+                : baseUserMessage;
+
             const historyForRouter = chatHistory.slice(0, -1);
 
             const rawResponse = await generateResponse(lastUserMessage, systemPrompt, historyForRouter);

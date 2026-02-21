@@ -115,6 +115,10 @@ class CareerCoach {
                 cta_message: "Haz que este CV sea IRRESTISTIBLE. Agenda tu llamada estratégica ahora."
             };
 
+            if (funnelResponse.score < 80) {
+                funnelResponse.improvement_plan.push("📅 Agenda una llamada estratégica gratuita inmediata para resolver el nivel requerido y mejorar tu perfil.");
+            }
+
             return funnelResponse;
 
         } catch (error) {

@@ -176,7 +176,7 @@ const ATSScanner = ({ session }) => {
                                 <p className="text-sm font-medium leading-relaxed">
                                     {result.score >= 80
                                         ? "Tu perfil tiene una alta compatibilidad con el sistema de filtrado. Probabilidad de entrevista: ALTA."
-                                        : "El sistema ATS detecta brechas críticas entre tu CV y los requisitos. Probabilidad de entrevista: BAJA."}
+                                        : "El sistema ATS detecta brechas críticas entre tu CV y los requisitos. Probabilidad de entrevista: BAJA. Te recomendamos agendar una llamada estratégica para resolver estas brechas."}
                                 </p>
                             </div>
 
