@@ -192,6 +192,19 @@ const SYLLABUS_FULL = {
             feedback_protocol: "Debate de estilo y registro.",
             interaction_style: "Erudito."
         }
+    },
+    // SPANISH (ESPAÑOL)
+    "es": {
+        "B2": {
+            description: "Avanzado / Intermedio Superior",
+            goal: "Interactuar con fluidez y naturalidad en contextos profesionales.",
+            grammar: "Subjuntivo, tiempos compuestos, perífrasis verbales, conectores lógicos de argumentación.",
+            vocab: "Entorno profesional, modismos ejecutivos, vocabulario específico de la industria.",
+            skills: "Argumentación sólida, fluidez conversacional, manejo de registros profesionales.",
+            expected_errors: ["Uso incorrecto de preposiciones", "Falta de precisión en términos técnicos", "Concordancia"],
+            feedback_protocol: "Corrección de estilo, precisión léxica y naturalidad profesional.",
+            interaction_style: "Conversacional, profesional y directo."
+        }
     }
 };
 

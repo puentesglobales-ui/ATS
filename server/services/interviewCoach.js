@@ -10,15 +10,15 @@ class InterviewCoach {
      * initializes the interview context
      */
     generateSystemPrompt(cvText, jobDescription, mode = 'ALLY', userLang = 'en', userLevel = 'B2') {
-        let basePersona = PERSONAS.RECRUITER_ALLY;
+        const isEsp = userLang.toLowerCase() === 'es';
+        const personaKey = isEsp ? `RECRUITER_${mode}_ES` : `RECRUITER_${mode}`;
+        let basePersona = PERSONAS[personaKey] || PERSONAS.RECRUITER_ALLY;
         let modeInstruction = "";
 
         if (mode === 'TECHNICAL') {
-            basePersona = PERSONAS.RECRUITER_TECHNICAL;
-            modeInstruction = "Focus on technical accuracy. Drill down heavily on details.";
+            modeInstruction = isEsp ? "Enfócate en la precisión técnica. Indaga profundamente en los detalles." : "Focus on technical accuracy. Drill down heavily on details.";
         } else if (mode === 'STRESS') {
-            basePersona = PERSONAS.RECRUITER_STRESS;
-            modeInstruction = "Be challenging. Test resilience. Use silence. Interrupt if vague.";
+            modeInstruction = isEsp ? "Sé desafiante. Pon a prueba su resiliencia. Usa el silencio. Interrumpe si es vago." : "Be challenging. Test resilience. Use silence. Interrupt if vague.";
         }
 
         // --- LINGUISTIC ENGINE INJECTION ---
@@ -26,7 +26,12 @@ class InterviewCoach {
         // Fallback to English B2 if not found
         const syllabus = SYLLABUS_FULL[langKey]?.[userLevel] || SYLLABUS_FULL['en']['B2'];
 
-        const linguisticInstructions = `
+        const linguisticInstructions = isEsp ? `
+        **EXPECTATIVAS LINGÜÍSTICAS (${userLang.toUpperCase()} - Nivel ${userLevel}):**
+        - **Gramática a revisar:** ${syllabus.grammar}
+        - **Errores comunes a marcar:** ${syllabus.expected_errors ? syllabus.expected_errors.join(", ") : "Errores básicos"}
+        - **Estrategia de Feedback:** ${syllabus.feedback_protocol}
+        ` : `
         **LINGUISTIC EXPECTATIONS (${userLang.toUpperCase()} - Level ${userLevel}):**
         - **Grammar to Check:** ${syllabus.grammar}
         - **Expected Style:** ${syllabus.interaction_style}
@@ -34,57 +39,42 @@ class InterviewCoach {
         - **Feedback Strategy:** ${syllabus.feedback_protocol}
         `;
 
-        const languageBypass = PERSONAS.LANGUAGE_RULE(userLang);
+        const langBypass = isEsp
+            ? `**REGLA CRÍTICA: DEBES HABLAR EN ESPAÑOL**\n- Toda la entrevista debe ser en ESPAÑOL.\n- Tienes PROHIBIDO decir que la entrevista será en inglés.\n- Si el CV o la vacante están en inglés, tradúcelos mentalmente y habla en ESPAÑOL.`
+            : `**CRITICAL: YOU MUST SPEAK ${userLang.toUpperCase()}**\n- Conduct the entire interview in ${userLang.toUpperCase()}.`;
 
         return `
+        ${langBypass}
         ${basePersona}
-        ${languageBypass}
 
-        **INPUT CONTEXT:**
-        - CV Content: "${cvText.slice(0, 2000)}..."
-        - Job Description: "${jobDescription.slice(0, 1000)}..."
+        **CONTEXTO:**
+        - CV: "${cvText.slice(0, 2000)}..."
+        - Vacante: "${jobDescription.slice(0, 1000)}..."
 
-        **YOUR GOAL:**
-        Conduct a realistic job interview while simultaneously providing **DUAL-LAYER FEEDBACK** (Content + Language).
+        **OBJETIVO:**
+        ${isEsp ? "Realiza una entrevista de trabajo realista y proporciona feedback sobre el contenido y el idioma." : "Conduct a realistic job interview while providing feedback on content and language."}
         ${modeInstruction}
 
         ${linguisticInstructions}
 
-        **INTERVIEW PHASES (The Layers):**
-        1. **Icebreaker:** "Tell me about yourself", "Why this role?". Focus on clarity.
-        2. **CV Deep Dive:** Ask about specific roles/skills in the CV. Dig for truth.
-        3. **Situational (STAR):** "Tell me about a time you failed...", "Conflict resolution".
-        4. **Pressure:** "Why should we hire you?", "Salary expectations".
+        **FASES:**
+        1. Rompehielo
+        2. Análisis de CV
+        3. Situacional (STAR)
+        4. Presión
 
-        **RESPONSE FORMAT (STRICT JSON):**
-        You MUST return valid JSON. Do not output markdown blocks.
-        Structure:
+        **REGLAS:**
+        - Devuelve ÚNICAMENTE JSON válido.
+        - **IDIOMA:** Todo el 'dialogue' debe estar en ${userLang.toUpperCase()}.
+        ${isEsp ? "- NO menciones el inglés a menos que el usuario te lo pida explícitamente." : ""}
+
+        **STRICT JSON STRUCTURE:**
         {
-            "dialogue": "String. What (The Recruiter Persona) says to the candidate. Keep it spoken, natural, professional. Max 2-3 sentences.",
-            "feedback": {
-                "score": Integer (0-100 based on content),
-                "analysis": "String. Brief analysis of the CONTENT (STAR method, clarity).",
-                "good": "String. What they did well (Content/Behavior).",
-                "bad": "String. What they did wrong (Content/Behavior).",
-                "suggestion": "String. How a Senior request would have answered better (Content)."
-            },
-            "language_feedback": {
-                "level_check": "String. (e.g. 'Your level seems B1, role requires B2').",
-                "correction": "String. Specific grammar/vocabulary correction based on ${userLevel} protocols.",
-                "style_tip": "String. Tip to sound more professional/native."
-            },
-            "stage": "String. Current Phase (e.g. 'ICEBREAKER', 'TECHNICAL', 'BEHAVIORAL')"
+            "dialogue": "Recruiter statement (max 2 sentences)",
+            "feedback": { "score": 0-100, "analysis": "STAR method check", "good": "...", "bad": "...", "suggestion": "..." },
+            "language_feedback": { "level_check": "...", "correction": "Grammar/Vocab fix", "style_tip": "..." },
+            "stage": "ICEBREAKER | CV_DIVE | SITUATIONAL | PRESSURE"
         }
-
-        **BEHAVIOR RULES:**
-        - **First Turn:** If history is empty, Introduce yourself briefly and ask the first question (Phase 1). Feedback should be null.
-        - **Subsequent Turns:** Analyze the user's input. Give legacy 'feedback' AND new 'language_feedback'. Then, as Alex/Marcus/Victoria, react naturally.
-        - **LANGUAGE POLICY:**
-            - **IMPORTANT:** All recruiter 'dialogue' MUST be written in the target language: **${userLang.toUpperCase()}**.
-            - If the target language is Spanish ('es'), you MUST speak Spanish.
-            - Feedback and correction fields should also be in ${userLang.toUpperCase()} unless a direct translation is needed for clarity.
-            - Never start the interview in English if the target language is Spanish.
-        - **Voice Capable:** If user mentions speaking/audio, say "I'm listening".
         `;
     }
 
