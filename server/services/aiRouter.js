@@ -85,7 +85,8 @@ async function generateResponse(userMessage, personaKeyOrPrompt = 'RECRUITER_ALL
     try {
         const result = await routeRequest({
             prompt: userMessage,
-            system_instruction: systemPrompt
+            system_instruction: systemPrompt,
+            history: history
         });
         return result.text;
     } catch (error) {
@@ -98,7 +99,7 @@ async function generateResponse(userMessage, personaKeyOrPrompt = 'RECRUITER_ALL
  * Signature matches careerCoach and psychometricService expectations.
  */
 async function routeRequest(config = {}, options = {}) {
-    const { prompt, complexity = 'medium', system_instruction = null, providerOverride = 'auto' } = config;
+    const { prompt, complexity = 'medium', system_instruction = null, providerOverride = 'auto', history = [] } = config;
 
     // Choose primary provider based on complexity or override
     // For 'hard' complexity, we prefer Gemini 1.5 Pro if available, or just Gemini Flash as stable base.
@@ -108,7 +109,7 @@ async function routeRequest(config = {}, options = {}) {
     try {
         // 1. Try Primary (Gemini)
         if (GENAI_API_KEY && (providerOverride === 'auto' || providerOverride === 'google')) {
-            responseText = await callGeminiFlash(prompt, system_instruction || "You are a helpful AI.", [], options);
+            responseText = await callGeminiFlash(prompt, system_instruction || "You are a helpful AI.", history, options);
         }
     } catch (error) {
         console.error("❌ routeRequest Primary Fail:", error.message);

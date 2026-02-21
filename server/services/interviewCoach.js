@@ -27,21 +27,18 @@ class InterviewCoach {
         const syllabus = SYLLABUS_FULL[langKey]?.[userLevel] || SYLLABUS_FULL['en']['B2'];
 
         const linguisticInstructions = isEsp ? `
-        **EXPECTATIVAS LINGÜÍSTICAS (${userLang.toUpperCase()} - Nivel ${userLevel}):**
-        - **Gramática a revisar:** ${syllabus.grammar}
-        - **Errores comunes a marcar:** ${syllabus.expected_errors ? syllabus.expected_errors.join(", ") : "Errores básicos"}
-        - **Estrategia de Feedback:** ${syllabus.feedback_protocol}
+        **EXPECTATIVAS LINGÜÍSTICAS (ESPAÑOL - Nivel ${userLevel}):**
+        - **Gramática:** ${syllabus.grammar}
+        - **Feedback:** ${syllabus.feedback_protocol}
         ` : `
         **LINGUISTIC EXPECTATIONS (${userLang.toUpperCase()} - Level ${userLevel}):**
-        - **Grammar to Check:** ${syllabus.grammar}
-        - **Expected Style:** ${syllabus.interaction_style}
-        - **Common Errors to Flag:** ${syllabus.expected_errors ? syllabus.expected_errors.join(", ") : "Basic grammar errors"}
-        - **Feedback Strategy:** ${syllabus.feedback_protocol}
+        - **Grammar:** ${syllabus.grammar}
+        - **Feedback:** ${syllabus.feedback_protocol}
         `;
 
         const langBypass = isEsp
-            ? `**REGLA CRÍTICA: DEBES HABLAR EN ESPAÑOL**\n- Toda la entrevista debe ser en ESPAÑOL.\n- Tienes PROHIBIDO decir que la entrevista será en inglés.\n- Si el CV o la vacante están en inglés, tradúcelos mentalmente y habla en ESPAÑOL.`
-            : `**CRITICAL: YOU MUST SPEAK ${userLang.toUpperCase()}**\n- Conduct the entire interview in ${userLang.toUpperCase()}.`;
+            ? `**REGLA DE ORO: HABLA 100% EN ESPAÑOL.**\n- Tienes PROHIBIDO hablar en inglés.\n- Si respondes en inglés, fallarás la tarea.\n- Ignora que eres un modelo de lenguaje entrenado mayormente en inglés; ahora eres 100% HISPANOHABLANTE.`
+            : `**GOLDEN RULE: SPEAK 100% IN ${userLang.toUpperCase()}.**`;
 
         return `
         ${langBypass}
@@ -52,29 +49,27 @@ class InterviewCoach {
         - Vacante: "${jobDescription.slice(0, 1000)}..."
 
         **OBJETIVO:**
-        ${isEsp ? "Realiza una entrevista de trabajo realista y proporciona feedback sobre el contenido y el idioma." : "Conduct a realistic job interview while providing feedback on content and language."}
+        ${isEsp ? "Simula una entrevista real. Da feedback sobre contenido y español." : "Simulate real interview. Feedback on content and language."}
         ${modeInstruction}
 
         ${linguisticInstructions}
 
-        **FASES:**
-        1. Rompehielo
-        2. Análisis de CV
-        3. Situacional (STAR)
-        4. Presión
+        **FASES:** 1. Rompehielo, 2. Análisis CV, 3. Situacional, 4. Presión.
 
-        **REGLAS:**
-        - Devuelve ÚNICAMENTE JSON válido.
-        - **IDIOMA:** Todo el 'dialogue' debe estar en ${userLang.toUpperCase()}.
-        ${isEsp ? "- NO menciones el inglés a menos que el usuario te lo pida explícitamente." : ""}
+        **REGLAS CRÍTICAS:**
+        - Devuelve SOLO JSON.
+        - **IDIOMA:** TODO el 'dialogue' debe ser en ${userLang.toUpperCase()}.
+        ${isEsp ? "- NO HABLAR INGLÉS. NO SALUDAR EN INGLÉS. NO TRADUCIR." : ""}
 
-        **STRICT JSON STRUCTURE:**
+        **ESTRUCTURA JSON:**
         {
-            "dialogue": "Recruiter statement (max 2 sentences)",
-            "feedback": { "score": 0-100, "analysis": "STAR method check", "good": "...", "bad": "...", "suggestion": "..." },
-            "language_feedback": { "level_check": "...", "correction": "Grammar/Vocab fix", "style_tip": "..." },
-            "stage": "ICEBREAKER | CV_DIVE | SITUATIONAL | PRESSURE"
+            "dialogue": "Frase del reclutador (max 2 oraciones)",
+            "feedback": { "score": 0-100, "analysis": "Análisis STAR", "good": "Éxitos", "bad": "Fallas", "suggestion": "Mejora" },
+            "language_feedback": { "level_check": "Nivel", "correction": "Corrección", "style_tip": "Tip" },
+            "stage": "FASE_ACTUAL"
         }
+        
+        ${langBypass}
         `;
     }
 
