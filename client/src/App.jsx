@@ -98,8 +98,8 @@ function App() {
   const ProtectedRoute = ({ children }) => {
     if (!session) return <Navigate to="/login" />;
 
-    const { is_student, payment_completed } = session.user.user_metadata || {};
-    const isMasterKey = session.user.email === 'visasytrabajos@gmail.com';
+    const { is_student, payment_completed } = session?.user?.user_metadata || {};
+    const isMasterKey = session?.user?.email === 'visasytrabajos@gmail.com';
 
     if (is_student === false && !payment_completed && !isMasterKey) {
       return <Navigate to="/payment-setup" />;

@@ -65,7 +65,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // WhatsApp module removed for Career Mastery MVP
 // const whatsapp = require('./whatsapp');
-// app.use('/api/whatsapp', whatsapp);Router);
+// app.use('/api/whatsapp', whatsapp);
 
 app.get('/', (req, res) => {
   res.json({

@@ -15,11 +15,20 @@ const getBaseUrl = () => {
 
 const api = axios.create({
     baseURL: getBaseUrl(),
-    timeout: 60000, // 60 seconds timeout
+    timeout: 15000, // Reduced to 15s for better UX on fail
     headers: {
         'Content-Type': 'application/json',
     },
 });
+
+// Interceptor for Debugging
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        console.error("🌐 API ERROR:", error.config?.url, error.message);
+        return Promise.reject(error);
+    }
+);
 
 // Get available scenarios
 export const getScenarios = async () => {
