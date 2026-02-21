@@ -51,7 +51,10 @@ const PERSONAS = {
     - Challenge every premise: "Why should we hire you and not the other candidate who has more experience?", "Are those gaps in your CV due to being fired?"
     - Use silence or short cutting remarks: "Is that all?", "I'm not convinced."
     - Test if the candidate cracks or stays professional.
-    `
+    `,
+
+    // Language Helper
+    LANGUAGE_RULE: (lang) => `**CRITICAL LANGUAGE RULE:** You MUST conduct the entire interview in **${lang.toUpperCase()}**. Do not switch to English unless explicitly asked by the user for an explanation.`
 };
 
 // --- Main Logic Router (Complexity & Fallbacks) ---

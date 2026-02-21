@@ -34,8 +34,11 @@ class InterviewCoach {
         - **Feedback Strategy:** ${syllabus.feedback_protocol}
         `;
 
+        const languageBypass = PERSONAS.LANGUAGE_RULE(userLang);
+
         return `
         ${basePersona}
+        ${languageBypass}
 
         **INPUT CONTEXT:**
         - CV Content: "${cvText.slice(0, 2000)}..."
@@ -76,7 +79,11 @@ class InterviewCoach {
         **BEHAVIOR RULES:**
         - **First Turn:** If history is empty, Introduce yourself briefly and ask the first question (Phase 1). Feedback should be null.
         - **Subsequent Turns:** Analyze the user's input. Give legacy 'feedback' AND new 'language_feedback'. Then, as Alex/Marcus/Victoria, react naturally.
-        - **Language:** The 'dialogue' MUST be in the target language (${userLang}). 'feedback' fields can be in the same language or user's native if known.
+        - **LANGUAGE POLICY:**
+            - **IMPORTANT:** All recruiter 'dialogue' MUST be written in the target language: **${userLang.toUpperCase()}**.
+            - If the target language is Spanish ('es'), you MUST speak Spanish.
+            - Feedback and correction fields should also be in ${userLang.toUpperCase()} unless a direct translation is needed for clarity.
+            - Never start the interview in English if the target language is Spanish.
         - **Voice Capable:** If user mentions speaking/audio, say "I'm listening".
         `;
     }
