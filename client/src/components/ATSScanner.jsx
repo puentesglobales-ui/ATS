@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Upload, FileText, AlertTriangle, CheckCircle, XCircle,
+    Upload, FileText, AlertTriangle, CheckCircle, XCircle, X,
     Target, Sparkles, Loader, ShieldCheck, MessageCircle, ArrowRight
 } from 'lucide-react';
 import api from '../services/api';
@@ -155,10 +155,10 @@ const ATSScanner = ({ session }) => {
                                 <div className="inline-block relative">
                                     <svg className="w-40 h-40 transform -rotate-90">
                                         <circle cx="80" cy="80" r="70" fill="none" stroke="#f1f5f9" strokeWidth="10" />
-                                        <circle cx="80" cy="80" r="70" fill="none" stroke="#0891b2" strokeWidth="10" strokeDasharray="440" strokeDashoffset={440 - (440 * result.score / 100)} strokeLinecap="round" className="transition-all duration-1000" />
+                                        <circle cx="80" cy="80" r="70" fill="none" stroke="#0891b2" strokeWidth="10" strokeDasharray="440" strokeDashoffset={440 - (440 * (result.score || 0) / 100)} strokeLinecap="round" className="transition-all duration-1000" />
                                     </svg>
                                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                        <span className="text-5xl font-black text-slate-900">{result.score}%</span>
+                                        <span className="text-5xl font-black text-slate-900">{result.score || 0}%</span>
                                         <span className="text-[8px] font-black uppercase text-cyan-600 tracking-widest">Match Score</span>
                                     </div>
                                 </div>

@@ -1,294 +1,276 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import {
-    Globe,
-    Flag, // Used for country selection logic icon
-    Briefcase,
-    FileText,
-    ArrowRight,
-    ArrowLeft,
-    CheckCircle,
-    MapPin,
-    AlertTriangle,
-    Sparkles
+    Target, Briefcase, Sparkles, ArrowRight, ArrowLeft,
+    CheckCircle, List, Send, Info, ShieldCheck, MapPin,
+    AlertCircle
 } from 'lucide-react';
-
-// STAGES OF THE WIZARD
-const STAGES = {
-    MARKET: 'MARKET',
-    ROLE: 'ROLE',
-    INPUT: 'INPUT'
-};
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 const CVWizard = () => {
-    // STATE
-    const [currentStage, setCurrentStage] = useState(STAGES.MARKET);
-    const [formData, setFormData] = useState({
-        // Stage 1: Market
-        market: '', // 'USA', 'EUROPE', 'LATAM'
-        country: '', // If Europe (e.g., 'UK', 'DE', 'ES')
-        // Stage 2: Profile
-        role: '',
-        industry: '',
-        years_exp: 0,
-        // Stage 3: Extra
-        visa_status: '',
-        target_lang: 'English'
+    const navigate = useNavigate();
+    const [step, setStep] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const [data, setData] = useState({
+        destination: '',
+        company: '',
+        jobDescription: '',
+        country: 'Global',
+        currentRole: '',
+        yearsExp: '',
+        englishLevel: 'B2',
+        rawExperience: '',
+        accomplishments: '',
+        selectedSkills: []
     });
 
-    const handleNext = (nextStage) => {
-        setCurrentStage(nextStage);
+    const [analysis, setAnalysis] = useState({
+        jd: null,
+        gap: null,
+        extraction: null
+    });
+
+    const updateData = (key, value) => setData(prev => ({ ...prev, [key]: value }));
+
+    const nextStep = async () => {
+        if (step === 1 && data.jobDescription) {
+            setLoading(true);
+            try {
+                const res = await api.post('/cv-wizard/1', { jobDescription: data.jobDescription });
+                setAnalysis(prev => ({ ...prev, jd: res.data }));
+                setStep(2);
+            } catch (err) { alert("Error analizando la vacante"); }
+            finally { setLoading(false); }
+        }
+        else if (step === 2) {
+            setLoading(true);
+            try {
+                const res = await api.post('/cv-wizard/2', {
+                    currentProfile: { role: data.currentRole, years: data.yearsExp, english: data.englishLevel },
+                    jdAnalysis: analysis.jd
+                });
+                setAnalysis(prev => ({ ...prev, gap: res.data }));
+                setStep(3);
+            } catch (err) { alert("Error calculando el match"); }
+            finally { setLoading(false); }
+        }
+        else if (step === 3) setStep(4);
+        else if (step === 4) setStep(5);
+        else if (step === 5) {
+            setLoading(true);
+            try {
+                const res = await api.post('/cv-wizard/4', {
+                    structuredExperience: data.rawExperience,
+                    accomplishments: data.accomplishments
+                });
+                // Final redirect to editor with full data
+                navigate('/cv-builder', { state: { ...data, ...analysis, finalAnalysis: res.data } });
+            } catch (err) { alert("Error procesando logros"); }
+            finally { setLoading(false); }
+        }
+        else {
+            setStep(s => s + 1);
+        }
     };
 
-    const handleBack = (prevStage) => {
-        setCurrentStage(prevStage);
-    };
+    const prevStep = () => setStep(s => s - 1);
 
-    const updateForm = (key, value) => {
-        setFormData(prev => ({ ...prev, [key]: value }));
-    };
-
-    // RENDERERS FOR EACH STAGE
-
-    // --- STAGE 1: MARKET SELECTION ---
-    const renderMarketStage = () => (
-        <div className="space-y-6">
-            <h2 className="text-3xl font-bold text-white text-center mb-2">
-                ¿Dónde quieres trabajar?
-            </h2>
-            <p className="text-slate-400 text-center mb-8">
-                El formato y reglas de tu CV cambiarán radicalmente según el mercado.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* OPTION A: USA */}
-                <button
-                    onClick={() => updateForm('market', 'USA')}
-                    className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-4 text-center group
-                    ${formData.market === 'USA'
-                            ? 'border-cyan-500 bg-cyan-900/20'
-                            : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'}`}
-                >
-                    <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center text-3xl">
-                        🇺🇸
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-bold text-white">EE. UU. / Anglo</h3>
-                        <p className="text-sm text-slate-400 mt-2">
-                            Estilo "Resume". Breve, sin foto, enfocado en logros (Action + Impact).
-                        </p>
-                    </div>
-                    {formData.market === 'USA' && <CheckCircle className="text-cyan-500" />}
-                </button>
-
-                {/* OPTION B: EUROPE */}
-                <button
-                    onClick={() => updateForm('market', 'EUROPE')}
-                    className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-4 text-center group
-                    ${formData.market === 'EUROPE'
-                            ? 'border-cyan-500 bg-cyan-900/20'
-                            : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'}`}
-                >
-                    <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center text-3xl">
-                        🇪🇺
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-bold text-white">Europa</h3>
-                        <p className="text-sm text-slate-400 mt-2">
-                            Estilo "CV". Detallado, estructura formal, idiomas y ubicación explícitos.
-                        </p>
-                    </div>
-                    {formData.market === 'EUROPE' && <CheckCircle className="text-cyan-500" />}
-                </button>
-
-                {/* OPTION C: LATAM */}
-                <button
-                    onClick={() => updateForm('market', 'LATAM')}
-                    className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-4 text-center group
-                    ${formData.market === 'LATAM'
-                            ? 'border-cyan-500 bg-cyan-900/20'
-                            : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'}`}
-                >
-                    <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center text-3xl">
-                        🌎
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-bold text-white">Global / LATAM</h3>
-                        <p className="text-sm text-slate-400 mt-2">
-                            Formato estándar híbrido. Visible, claro y completo.
-                        </p>
-                    </div>
-                    {formData.market === 'LATAM' && <CheckCircle className="text-cyan-500" />}
-                </button>
-            </div>
-
-            {/* SUB-SELECTION FOR EUROPE */}
-            <AnimatePresence>
-                {formData.market === 'EUROPE' && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        className="mt-6 bg-slate-800/50 p-6 rounded-xl border border-slate-700"
-                    >
-                        <label className="text-slate-300 font-semibold mb-3 block">
-                            País Principal (Define reglas de foto y datos)
-                        </label>
-                        <div className="flex gap-3 flex-wrap">
-                            {['UK', 'Germany', 'France', 'Spain', 'Other'].map((country) => (
-                                <button
-                                    key={country}
-                                    onClick={() => updateForm('country', country)}
-                                    className={`px-4 py-2 rounded-lg border transition-all
-                                    ${formData.country === country
-                                            ? 'bg-cyan-600 border-cyan-500 text-white'
-                                            : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'}`}
-                                >
-                                    {country}
-                                </button>
-                            ))}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* NEXT BUTTON */}
-            <div className="flex justify-end mt-8">
-                <button
-                    disabled={!formData.market}
-                    onClick={() => handleNext(STAGES.ROLE)}
-                    className="flex items-center gap-2 px-8 py-3 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all"
-                >
-                    Siguiente: Perfil <ArrowRight size={20} />
-                </button>
-            </div>
-        </div>
-    );
-
-    // --- STAGE 2: ROLE & PROFILE ---
-    const renderRoleStage = () => (
-        <div className="space-y-6">
-            <h2 className="text-3xl font-bold text-white text-center mb-2">
-                Define tu Perfil
-            </h2>
-            <p className="text-slate-400 text-center mb-8">
-                Esto ayuda a la IA a priorizar keywords relevantes para tu industria.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label className="block text-slate-300 mb-2 font-medium">Cargo Objetivo (Target Role)</label>
-                    <input
-                        type="text"
-                        placeholder="Ej: Full Stack Developer, Marketing Manager..."
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 outline-none"
-                        value={formData.role}
-                        onChange={(e) => updateForm('role', e.target.value)}
-                    />
-                </div>
-                <div>
-                    <label className="block text-slate-300 mb-2 font-medium">Industria</label>
-                    <input
-                        type="text"
-                        placeholder="Ej: Fintech, SaaS, Retail, Healthcare..."
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 outline-none"
-                        value={formData.industry}
-                        onChange={(e) => updateForm('industry', e.target.value)}
-                    />
-                </div>
-            </div>
-
-            {/* VISA & LANGUAGE WARNINGS */}
-            <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700 mt-6">
-                <div className="flex items-start gap-3">
-                    <AlertTriangle className="text-yellow-500 shrink-0 mt-1" />
-                    <div>
-                        <h4 className="text-white font-bold text-lg">Reglas de Oro</h4>
-                        <p className="text-slate-400 text-sm mt-1">
-                            {formData.market === 'USA'
-                                ? "En USA, la honestidad sobre la VISA es crucial. Si requieres 'Sponsorship', el sistema resaltará tus méritos técnicos para compensar esa barrera."
-                                : "En Europa, el nivel de idioma es el filtro #1. Sé honesto: pondremos tu nivel real (B2, C1) visible al inicio."}
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {/* NAVIGATION */}
-            <div className="flex justify-between mt-8">
-                <button
-                    onClick={() => handleBack(STAGES.MARKET)}
-                    className="flex items-center gap-2 px-6 py-3 text-slate-400 hover:text-white transition-all"
-                >
-                    <ArrowLeft size={20} /> Volver
-                </button>
-                <button
-                    disabled={!formData.role}
-                    onClick={() => handleNext(STAGES.INPUT)}
-                    className="flex items-center gap-2 px-8 py-3 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all"
-                >
-                    Siguiente: Cargar Datos <ArrowRight size={20} />
-                </button>
-            </div>
-        </div>
-    );
-
-    // --- STAGE 3: INPUT DATA ---
-    const renderInputStage = () => (
-        <div className="max-w-xl mx-auto text-center space-y-8">
-            <h2 className="text-3xl font-bold text-white mb-2">
-                ¡Todo listo para construir!
-            </h2>
-            <div className="inline-block p-4 bg-cyan-900/30 rounded-full mb-4 animate-pulse">
-                <Sparkles className="text-cyan-400 w-12 h-12" />
-            </div>
-
-            <p className="text-slate-300 text-lg">
-                Has configurado el motor para: <br />
-                <span className="text-cyan-400 font-bold">{formData.market} {formData.country ? `(${formData.country})` : ''}</span>
-                {' '}como <span className="text-cyan-400 font-bold">{formData.role}</span>.
-            </p>
-
-            <p className="text-slate-400">
-                En el siguiente paso, la IA tomará el control para redactar tu CV con el sistema
-                <span className="text-white font-mono bg-slate-800 px-2 py-1 rounded mx-1">
-                    {formData.market === 'USA' ? 'Action+Impact' : 'Competencia+Review'}
-                </span>.
-            </p>
-
-            <div className="flex flex-col gap-4 mt-8">
-                <Link
-                    to="/cv-builder"
-                    state={formData}
-                    className="block w-full py-4 text-center bg-white text-slate-900 rounded-xl font-bold text-xl hover:bg-cyan-50 transition-all shadow-lg transform hover:-translate-y-1"
-                >
-                    🚀 Abrir Editor Inteligente
-                </Link>
-                <button
-                    onClick={() => handleBack(STAGES.ROLE)}
-                    className="text-slate-500 hover:text-white underline text-sm"
-                >
-                    Atrás / Corregir datos
-                </button>
-            </div>
-        </div>
-    );
+    const steps = [
+        { id: 1, title: "El Objetivo", icon: <Target className="text-cyan-400" /> },
+        { id: 2, title: "Tu Perfil", icon: <Briefcase className="text-purple-400" /> },
+        { id: 3, title: "Tu Historia", icon: <List className="text-emerald-400" /> },
+        { id: 4, title: "Tus Logros", icon: <Sparkles className="text-yellow-400" /> },
+        { id: 5, title: "Finalizar", icon: <Send className="text-blue-400" /> }
+    ];
 
     return (
-        <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
-            <div className="max-w-4xl w-full bg-black/40 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
+        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center p-6 font-sans">
+            {/* PROGRESS BAR */}
+            <div className="w-full max-w-4xl flex justify-between mb-12 relative">
+                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-800 -translate-y-1/2 z-0" />
+                {steps.map(s => (
+                    <div key={s.id} className="relative z-10 flex flex-col items-center gap-2">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 border-2 ${step >= s.id ? 'bg-cyan-600 border-cyan-400 shadow-[0_0_15px_rgba(8,145,178,0.4)]' : 'bg-slate-900 border-slate-700 text-slate-500'}`}>
+                            {step > s.id ? <CheckCircle size={20} /> : s.icon}
+                        </div>
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${step >= s.id ? 'text-cyan-400' : 'text-slate-600'}`}>{s.title}</span>
+                    </div>
+                ))}
+            </div>
 
-                {/* BACKGROUND GLOW */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-600/10 blur-[100px] rounded-full pointer-events-none" />
+            <div className="w-full max-w-3xl">
+                <AnimatePresence mode="wait">
+                    {/* STEP 1: JOB DESCRIPTION */}
+                    {step === 1 && (
+                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                            <div className="space-y-2">
+                                <h1 className="text-4xl font-black tracking-tighter">¿Cuál es el <span className="text-cyan-400">Puesto Ideal</span>?</h1>
+                                <p className="text-slate-400 font-medium">No la Ferrari... sino enseñarles a manejar. Empezamos por el destino.</p>
+                            </div>
 
-                {/* CONTENT */}
-                <div className="relative z-10">
-                    {currentStage === STAGES.MARKET && renderMarketStage()}
-                    {currentStage === STAGES.ROLE && renderRoleStage()}
-                    {currentStage === STAGES.INPUT && renderInputStage()}
+                            <div className="bg-slate-900/50 border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl space-y-6 backdrop-blur-sm">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest px-2">Job Title</label>
+                                        <input className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl focus:border-cyan-500 transition-all outline-none" placeholder="Ex: Full Stack Developer" value={data.destination} onChange={e => updateData('destination', e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest px-2">País del Mercado</label>
+                                        <select className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl focus:border-cyan-500 outline-none" value={data.country} onChange={e => updateData('country', e.target.value)}>
+                                            <option>USA</option>
+                                            <option>España</option>
+                                            <option>Alemania</option>
+                                            <option>UK</option>
+                                            <option>Global</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest px-2">Job Description (JD)</label>
+                                    <textarea className="w-full h-48 bg-slate-950 border border-slate-800 p-4 rounded-2xl focus:border-cyan-500 transition-all outline-none resize-none" placeholder="Pega los requisitos de la vacante..." value={data.jobDescription} onChange={e => updateData('jobDescription', e.target.value)} />
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* STEP 2: CURRENT STATUS & GAP */}
+                    {step === 2 && (
+                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                            <div className="space-y-2">
+                                <h1 className="text-4xl font-black tracking-tighter">¿Dónde estás <span className="text-purple-400">hoy</span>?</h1>
+                                <p className="text-slate-400">Detectamos la brecha para saber qué "vender" en el CV.</p>
+                            </div>
+
+                            {analysis.jd && (
+                                <div className="bg-cyan-600/10 border border-cyan-400/20 p-6 rounded-3xl flex gap-4 items-center">
+                                    <Info className="text-cyan-400 shrink-0" />
+                                    <p className="text-xs text-cyan-100 italic">
+                                        IA detectó: <span className="font-bold text-white uppercase">{analysis.jd.seniorityLevel}</span> para un puesto de <span className="font-bold text-white">{analysis.jd.detectedRole}</span>.
+                                    </p>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Rol Actual</label>
+                                        <input className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl outline-none focus:border-purple-500" value={data.currentRole} onChange={e => updateData('currentRole', e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Años de Exp.</label>
+                                        <input type="number" className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl outline-none focus:border-purple-500" value={data.yearsExp} onChange={e => updateData('yearsExp', e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] flex flex-col justify-center gap-4">
+                                    <div className="flex justify-between items-center bg-slate-950 p-3 rounded-xl border border-slate-800">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Inglés</span>
+                                        <div className="flex gap-2">
+                                            {['B1', 'B2', 'C1'].map(l => (
+                                                <button key={l} onClick={() => updateData('englishLevel', l)} className={`px-2 py-1 rounded text-[10px] font-bold ${data.englishLevel === l ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-500'}`}>{l}</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* STEP 3: RAW EXPERIENCE */}
+                    {step === 3 && (
+                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                            <div className="space-y-2">
+                                <h1 className="text-4xl font-black tracking-tighter">Contame <span className="text-emerald-400">Tu Historia</span></h1>
+                                <p className="text-slate-400">Sin pensar en el CV. Hablale a una persona, no a un sistema.</p>
+                            </div>
+
+                            {analysis.gap && (
+                                <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-2">
+                                    <div className="flex items-center gap-2 text-yellow-500 text-[10px] font-black uppercase tracking-widest">
+                                        <ShieldCheck size={14} /> Tu Superpoder Detectado:
+                                    </div>
+                                    <p className="text-sm font-medium text-slate-200">{analysis.gap.superpower}</p>
+                                </div>
+                            )}
+
+                            <textarea
+                                className="w-full h-80 bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] focus:border-emerald-500 outline-none text-slate-300 font-medium leading-relaxed shadow-inner"
+                                placeholder="Ej: Empecé en una startup haciendo de todo. A los 6 meses me pasaron a liderar el equipo de frontend..."
+                                value={data.rawExperience}
+                                onChange={e => updateData('rawExperience', e.target.value)}
+                            />
+                        </motion.div>
+                    )}
+
+                    {/* STEP 4: IMPACT (LOGROS) */}
+                    {step === 4 && (
+                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                            <div className="space-y-2">
+                                <h1 className="text-4xl font-black tracking-tighter">¿Qué <span className="text-yellow-400">Cambio</span> por Vos?</h1>
+                                <p className="text-slate-400">Acá es donde ganamos la entrevista. Buscamos impacto, no tareas.</p>
+                            </div>
+
+                            <div className="grid gap-4">
+                                <div className="p-6 bg-blue-900/10 border border-blue-400/20 rounded-3xl flex gap-4">
+                                    <AlertCircle className="text-blue-400 shrink-0" />
+                                    <p className="text-xs text-blue-200 leading-relaxed">
+                                        <span className="font-bold underline">Tip de Experto:</span> No pongas "Responsable de ventas". Pon "Aumenté las ventas un 20% en 3 meses automatizando el CRM".
+                                    </p>
+                                </div>
+
+                                <textarea
+                                    className="w-full h-64 bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] focus:border-yellow-500 outline-none text-slate-300 font-medium"
+                                    placeholder="¿Redujiste costos? ¿Automatizaste procesos? ¿Lideraste a alguien?"
+                                    value={data.accomplishments}
+                                    onChange={e => updateData('accomplishments', e.target.value)}
+                                />
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* STEP 5: FINAL PREVIEW */}
+                    {step === 5 && (
+                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center text-center space-y-8 py-12">
+                            <div className="w-24 h-24 bg-cyan-600/10 rounded-full flex items-center justify-center text-cyan-400 animate-pulse">
+                                <Sparkles size={48} />
+                            </div>
+                            <div className="space-y-2">
+                                <h2 className="text-4xl font-black">El Constructor está <span className="text-cyan-400">Listo</span></h2>
+                                <p className="text-slate-400 max-w-md mx-auto">
+                                    Hemos construido conciencia y estrategia. Ahora el algoritmo ensamblará tu versión de alto rendimiento.
+                                </p>
+                            </div>
+
+                            <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-[10px] text-slate-500 font-mono tracking-widest uppercase">
+                                Pipeline: Extraction -> Gap Analysis -> Impact Builder -> ATS Review
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* NAVIGATION BUTTONS */}
+                <div className="flex justify-between items-center mt-12 pt-8 border-t border-slate-900">
+                    {step > 1 ? (
+                        <button onClick={prevStep} className="flex items-center gap-2 px-6 py-3 font-black uppercase text-xs tracking-widest text-slate-500 hover:text-white transition-all">
+                            <ArrowLeft size={16} /> Volver
+                        </button>
+                    ) : <div />}
+
+                    <button
+                        onClick={nextStep}
+                        disabled={loading}
+                        className="px-10 py-5 bg-white text-slate-950 font-black rounded-2xl flex items-center gap-3 hover:scale-[1.05] transition-all shadow-xl shadow-cyan-600/10 disabled:opacity-50"
+                    >
+                        {loading ? <Loader className="animate-spin" /> : <span>{step === 5 ? 'Generar Perfil Pro' : 'Continuar'}</span>}
+                        <ArrowRight size={20} />
+                    </button>
                 </div>
             </div>
         </div>
     );
 };
+
+const Loader = ({ className }) => <div className={`w-5 h-5 border-2 border-slate-900 border-t-transparent rounded-full ${className}`}></div>;
 
 export default CVWizard;

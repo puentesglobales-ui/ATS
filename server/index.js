@@ -9,6 +9,7 @@ const FormData = require('form-data');
 const axios = require('axios');
 const cvService = require('./services/cvService');
 const atsService = require('./services/atsService');
+const cvWizardEngine = require('./services/cvWizardEngine');
 const puentesGlobales = require('./services/puentesGlobalesService');
 const { normalizeCV } = require('./services/cvNormalizer');
 
@@ -246,10 +247,10 @@ const checkUsage = async (userId, usageType = 'general') => {
 
       if (usageType === 'ats') {
         hasCredit = (profile.credits_ats || 0) > 0;
-        limitMsg = 'Has usado tu escaneo gratuito de CV. Actualiza a PRO para ilimitado.';
+        limitMsg = 'Ya has probado nuestras herramientas de CV. Si quieres más, agenda una llamada.';
       } else if (usageType === 'roleplay') {
         hasCredit = (profile.credits_roleplay || 0) > 0;
-        limitMsg = 'Has alcanzado el límite de 20 mensajes de Roleplay gratuito.';
+        limitMsg = 'Ya has probado nuestro simulador de entrevistas. Si quieres más, agenda una llamada.';
       } else {
         // Fallback or other types checking general usage_count if needed
         hasCredit = true;
@@ -553,11 +554,15 @@ app.post('/api/rewrite-cv', upload.single('cv'), async (req, res) => {
 app.post('/api/generate-cv', async (req, res) => {
   const userData = req.body;
 
-  if (!userData || !userData.role) {
-    return res.status(400).json({ error: 'Missing user data or role' });
-  }
-
   try {
+    const { userId } = userData;
+    if (userId) {
+      const usageCheck = await checkUsage(userId, 'ats');
+      if (!usageCheck.allowed) {
+        return res.status(402).json({ error: 'Limit Reached', message: usageCheck.message });
+      }
+    }
+
     console.log(`🚀 [CV-ENGINE] Generating stateless CV for ${userData.role} in ${userData.market || 'Global'}`);
 
     // 1. Generate Content and Design Tokens in Parallel
@@ -578,6 +583,12 @@ app.post('/api/generate-cv', async (req, res) => {
         engine: "Gemini 1.5 Flash (v5.1 Architecture)"
       }
     });
+
+    // Final Stage Crediting
+    if (userId && supabaseAdmin) {
+      await supabaseAdmin.rpc('decrement_credit', { p_user_id: userId, p_type: 'ats' });
+    }
+
   } catch (error) {
     console.error('CV Generation Error:', error);
     res.status(500).json({ error: 'Generation failed', details: error.message });
@@ -592,8 +603,19 @@ app.post('/api/ats-optimize', async (req, res) => {
   }
 
   try {
+    const { userId } = userData;
+    if (userId) {
+      const usageCheck = await checkUsage(userId, 'ats');
+      if (!usageCheck.allowed) {
+        return res.status(402).json({ error: 'Limit Reached', message: usageCheck.message });
+      }
+    }
     console.log(`🚀 [ATS-ENGINE] Optimizing CV for ${userData.role || 'User'} based on JD`);
     const result = await atsService.getATSComparison(userData, jobDescription);
+
+    if (userId && supabaseAdmin) {
+      await supabaseAdmin.rpc('decrement_credit', { p_user_id: userId, p_type: 'ats' });
+    }
 
     // Normalize the optimized content
     const cleanContent = normalizeCV(result.optimized_content);
@@ -604,7 +626,35 @@ app.post('/api/ats-optimize', async (req, res) => {
     });
   } catch (error) {
     console.error('ATS Optimization Error:', error);
-    res.status(500).json({ error: 'Optimization failed', details: error.message });
+    res.status(500).json({ error: 'Optimization failed' });
+  }
+});
+
+// NUEVA RUTA: CV WIZARD PIPELINE
+app.post('/api/cv-wizard/:step', async (req, res) => {
+  const { step } = req.params;
+  const data = req.body;
+
+  try {
+    const { userId } = data;
+    if (userId) {
+      const usageCheck = await checkUsage(userId, 'ats');
+      if (!usageCheck.allowed) {
+        return res.status(402).json({ error: 'Limit Reached', message: usageCheck.message });
+      }
+    }
+
+    const result = await cvWizardEngine.processWizardStep(step, data);
+
+    // If it's the final generation step, decrement credit
+    if (parseInt(step) === 5 && userId && supabaseAdmin) {
+      await supabaseAdmin.rpc('decrement_credit', { p_user_id: userId, p_type: 'ats' });
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error(`❌ Error en Wizard Paso ${step}:`, error);
+    res.status(500).json({ error: `Fallo en el paso ${step} del constructor` });
   }
 });
 

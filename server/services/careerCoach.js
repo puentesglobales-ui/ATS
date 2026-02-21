@@ -86,8 +86,36 @@ class CareerCoach {
             // Force score to be a Number
             if (fullAnalysis.score) fullAnalysis.score = Number(fullAnalysis.score);
 
-            // Returning full analysis for all users as they "pay with their data"
-            return fullAnalysis;
+            // --- FUNNEL LOGIC (The Hook) ---
+            // We give them the score and tell them they have high potential, 
+            // but we lock the "HOW" to force the conversion to a call.
+
+            const encouragingSummary = `¡Excelente potencial detectado! Tu perfil tiene una base sólida pero le falta el 'Ajuste de Élite' para ser irresistible para los reclutadores de ${jobDescription.slice(0, 50)}...`;
+
+            const funnelResponse = {
+                score: fullAnalysis.score,
+                match_level: fullAnalysis.score >= 50 ? "Alta Probabilidad" : "Potencial en Desarrollo",
+                summary: fullAnalysis.summary || encouragingSummary,
+
+                // Show what they HAVE right (Positive validation)
+                hard_skills_analysis: {
+                    matched_keywords: fullAnalysis.hard_skills_analysis?.matched_keywords || [],
+                    missing_keywords: ["🔒 Bloqueado: Agenda tu llamada para descubrir las keywords clave."],
+                    is_locked: true
+                },
+
+                // Lock the "Cure" (The Plan)
+                improvement_plan: [
+                    "🚀 Optimización de Logros de Impacto (Pendiente)",
+                    "🎯 Alineación de Keywords de Alta Conversión (Pendiente)",
+                    "💡 Sesión de Estrategia Personalizada sugerida."
+                ],
+
+                cta_type: "SCHEDULE_CALL",
+                cta_message: "Haz que este CV sea IRRESTISTIBLE. Agenda tu llamada estratégica ahora."
+            };
+
+            return funnelResponse;
 
         } catch (error) {
             console.error("CareerCoach Analysis Error:", error);
