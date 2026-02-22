@@ -49,7 +49,12 @@ const CVWizard = ({ session }) => {
         try {
             if (step === 1) {
                 // Parse Name and Location (Simple split for now or just store)
-                setData(prev => ({ ...prev, name: input.split(',')[0] || input, location: input.split(',')[1] || '' }));
+                const parts = input.split(',');
+                setData(prev => ({
+                    ...prev,
+                    name: parts[0]?.trim() || input,
+                    location: parts[1]?.trim() || 'Remoto/Global'
+                }));
                 setTimeout(() => {
                     setMessages(prev => [...prev, {
                         role: 'assistant',
@@ -60,7 +65,8 @@ const CVWizard = ({ session }) => {
                 }, 800);
             }
             else if (step === 2) {
-                setData(prev => ({ ...prev, jobDescription: input }));
+                // Use input as both job description and intended role for matching
+                setData(prev => ({ ...prev, jobDescription: input, destination: input.slice(0, 50) }));
                 setTimeout(() => {
                     setMessages(prev => [...prev, {
                         role: 'assistant',
@@ -71,7 +77,7 @@ const CVWizard = ({ session }) => {
                 }, 800);
             }
             else if (step === 3) {
-                setData(prev => ({ ...prev, rawExperience: input }));
+                setData(prev => ({ ...prev, currentRole: input.slice(0, 50), rawExperience: input }));
                 setTimeout(() => {
                     setMessages(prev => [...prev, {
                         role: 'assistant',
@@ -93,7 +99,7 @@ const CVWizard = ({ session }) => {
                 }, 800);
             }
             else if (step === 5) {
-                setData(prev => ({ ...prev, education: input })); // We'll simplify education/skills in one go for the conversational flow
+                setData(prev => ({ ...prev, education: input, skills: input })); // Mapping input to both temporarily for the prompt
                 setTimeout(() => {
                     setMessages(prev => [...prev, {
                         role: 'assistant',
@@ -104,7 +110,7 @@ const CVWizard = ({ session }) => {
                 }, 800);
             }
         } catch (err) {
-            console.error(err);
+            console.error("Wizard Step Error:", err);
             setLoading(false);
         }
     };

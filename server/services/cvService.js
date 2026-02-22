@@ -12,6 +12,24 @@ const model = genAI.getGenerativeModel({
 });
 
 const cvService = {
+    _safeParse(text) {
+        try {
+            const clean = text.replace(/```json\n?|```/g, '').trim();
+            return JSON.parse(clean);
+        } catch (e) {
+            console.error("❌ [CV-SERVICE] Failed to parse AI JSON:", text);
+            // Search for content within { } just in case
+            const start = text.indexOf('{');
+            const end = text.lastIndexOf('}');
+            if (start !== -1 && end !== -1) {
+                try {
+                    return JSON.parse(text.substring(start, end + 1));
+                } catch (e2) { return { error: "Parse failure", raw: text }; }
+            }
+            return { error: "Parse failure", raw: text };
+        }
+    },
+
     // PASO 1: Generar el contenido redactado profesionalmente
     async generateContent(userData) {
         const prompt = `
@@ -38,7 +56,7 @@ const cvService = {
             }
         `;
         const result = await model.generateContent(prompt);
-        return JSON.parse(result.response.text());
+        return this._safeParse(result.response.text());
     },
 
     // PASO 2: Generar los Design Tokens (El "look & feel")
@@ -53,7 +71,15 @@ const cvService = {
             Output JSON: { "color": "#hex", "font": "string", "spacing": "string", "layout": "string" }
         `;
         const result = await model.generateContent(prompt);
-        return JSON.parse(result.response.text());
+        const tokens = this._safeParse(result.response.text());
+
+        // Fallback for safety
+        return {
+            color: tokens.color || "#2563eb",
+            font: tokens.font || "Sans",
+            spacing: tokens.spacing || "compact",
+            layout: tokens.layout || "single-column"
+        };
     }
 };
 

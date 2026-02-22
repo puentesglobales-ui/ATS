@@ -32,7 +32,6 @@ class PuentesGlobalesEngine {
         }
     }
 
-    // PASO 1: Analizar CV + Puesto y generar el set de preguntas adaptativas
     async initializeAssessment(cvText, jobTitle) {
         const prompt = `
       **IDENTIDAD:** Reclutador Senior y Psicólogo Organizacional de Puentes Globales.
@@ -41,25 +40,48 @@ class PuentesGlobalesEngine {
       **TAREA:**
       1. Identifica los 5 rasgos de personalidad/comportamiento más críticos para tener éxito en este rol específico.
       2. Crea un test psicométrico adaptativo de 15 preguntas tipo Likert (1: Totalmente en desacuerdo, 5: Totalmente de acuerdo).
-      3. Las preguntas deben ser sutiles, no directas (ej: en lugar de "¿Eres puntual?", usar "Prefiero entregar mis tareas con antelación aunque no sean perfectas").
-      4. Incluye 3 "Lie Control Questions" para detectar deseabilidad social (intentar parecer mejor de lo que uno es).
+      3. Las preguntas deben ser sutiles, no directas.
+      4. Incluye 3 "Lie Control Questions" para detectar deseabilidad social (trait: "lie_control").
       
-      **FORMATO JSON REQUERIDO:**
+      **FORMATO JSON REQUERIDO (ESTRICTO):**
       {
-        "role_profile": { "trait_name": decimal_weight_from_0_to_1 },
+        "role_profile": { "trait_name": 0.8 },
         "questions": [
-          { 
-            "id": "q1", 
-            "text": "Escribe aquí la pregunta en español profesional...", 
-            "trait": "trait_name_matching_profile", 
-            "direction": "positive" | "reverse" 
-          }
+          { "id": "q1", "text": "...", "trait": "trait_name", "direction": "positive" }
         ]
       }
     `;
 
-        const result = await this.model.generateContent(prompt);
-        return this._safeParse(result.response.text());
+        try {
+            const result = await this.model.generateContent(prompt);
+            const assessment = this._safeParse(result.response.text());
+
+            if (assessment.questions && assessment.questions.length > 10) {
+                return assessment;
+            }
+            throw new Error("AI returned malformed or insufficient questions");
+        } catch (error) {
+            console.error("🚨 [PUENTES-SERVICE] Critical Failure:", error);
+            // FAILSAFE: Return a hardcoded high-quality set of questions if AI fails
+            return {
+                role_profile: { "Comunicación": 0.8, "Liderazgo": 0.7, "Resiliencia": 0.9, "Trabajo en Equipo": 0.8, "Atención al Detalle": 0.7 },
+                questions: [
+                    { id: "f1", text: "Prefiero planificar cada detalle antes de empezar un proyecto.", trait: "Atención al Detalle", direction: "positive" },
+                    { id: "f2", text: "Me siento cómodo liderando discusiones en grupos grandes.", trait: "Liderazgo", direction: "positive" },
+                    { id: "f3", text: "Cuando enfrento un problema difícil, no me rindo hasta resolverlo.", trait: "Resiliencia", direction: "positive" },
+                    { id: "f4", text: "Disfruto colaborar con otros más que trabajar solo.", trait: "Trabajo en Equipo", direction: "positive" },
+                    { id: "f5", text: "Me es fácil explicar conceptos complejos a personas sin experiencia.", trait: "Comunicación", direction: "positive" },
+                    { id: "f6", text: "A veces me distraigo fácilmente con tareas irrelevantes.", trait: "Atención al Detalle", direction: "reverse" },
+                    { id: "f7", text: "Prefiero que otros tomen las decisiones difíciles.", trait: "Liderazgo", direction: "reverse" },
+                    { id: "f8", text: "Me recupero rápido después de un fracaso profesional.", trait: "Resiliencia", direction: "positive" },
+                    { id: "f9", text: "Creo que la competencia individual es mejor que la colaboración.", trait: "Trabajo en Equipo", direction: "reverse" },
+                    { id: "f10", text: "Mis compañeros siempre entienden mis instrucciones a la primera.", trait: "Comunicación", direction: "positive" },
+                    { id: "f11", text: "Siempre digo la verdad, incluso cuando me perjudica.", trait: "lie_control", direction: "positive" },
+                    { id: "f12", text: "Nunca he llegado tarde a una cita en mi vida.", trait: "lie_control", direction: "positive" },
+                    { id: "f13", text: "Soy una persona perfectamente equilibrada en todo momento.", trait: "lie_control", direction: "positive" }
+                ]
+            };
+        }
     }
 
     // PASO 2: Calcular resultados (Matemática pura, stateless)

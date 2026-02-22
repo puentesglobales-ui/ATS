@@ -41,6 +41,7 @@ const PuentesAssessment = ({ session }) => {
     const handleStart = async () => {
         if (!cvText || !jobTitle) return alert("Por favor completa el CV y el Puesto.");
         setIsProcessing(true);
+        console.log("🚀 [PUENTES-CLIENT] Starting assessment for:", jobTitle);
         try {
             const { data } = await api.post('/workpass/start', {
                 cvText,
@@ -49,15 +50,16 @@ const PuentesAssessment = ({ session }) => {
             });
 
             if (data.questions && data.questions.length > 0) {
+                console.log("✅ [PUENTES-CLIENT] Questions received:", data.questions.length);
                 setQuestions(data.questions);
                 setProfile(data.role_profile);
                 setStage('TESTING');
             } else {
-                throw new Error("No hay preguntas generadas");
+                throw new Error("El motor no devolvió preguntas válidas.");
             }
         } catch (e) {
-            console.error(e);
-            alert("Error al iniciar el motor de Puentes Globales.");
+            console.error("❌ [PUENTES-CLIENT] Start Error:", e);
+            alert(`Error al iniciar el motor: ${e.message || "Problema de conexión"}. Por favor intenta de nuevo.`);
         } finally {
             setIsProcessing(false);
         }
@@ -77,6 +79,7 @@ const PuentesAssessment = ({ session }) => {
 
     const handleSubmit = async (finalAnswers) => {
         setStage('LOADING');
+        console.log("🚀 [PUENTES-CLIENT] Submitting answers...");
         try {
             // Format responses for backend
             const responses = questions.map(q => ({
@@ -97,8 +100,8 @@ const PuentesAssessment = ({ session }) => {
             setStage('REPORT');
             localStorage.removeItem('puentes_progress'); // Clear on success
         } catch (e) {
-            console.error(e);
-            alert("Error al procesar el reporte final.");
+            console.error("❌ [PUENTES-CLIENT] Submit Error:", e);
+            alert("Error al procesar el reporte final. Tu progreso se ha guardado.");
             setStage('TESTING');
         }
     };
