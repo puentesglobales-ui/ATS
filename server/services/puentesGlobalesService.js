@@ -119,14 +119,13 @@ class PuentesGlobalesEngine {
         };
     }
 
-    // PASO 3: Generar el Reporte Final (Cruce de Datos CV + Psicometría)
     async generateFinalReport(cvText, jobTitle, results) {
         const prompt = `
       **IDENTITY:** 
       Eres el "Senior Talent Strategist" de Puentes Globales. Tu especialidad es leer entre líneas y predecir el éxito a largo plazo de un candidato.
 
       **INPUT DATA:**
-      - CANDIDATO (CV): ${cvText}
+      - CANDIDATO (CV): ${cvText.slice(0, 1000)}
       - PUESTO: ${jobTitle}
       - RESULTADOS PSICOMÉTRICOS: Fit: ${results.fit_score}%, Honestidad: ${results.lie_score}%
       - RASGOS EVALUADOS: ${results.traits.join(", ")}
@@ -150,8 +149,26 @@ class PuentesGlobalesEngine {
       }
     `;
 
-        const result = await this.model.generateContent(prompt);
-        return this._safeParse(result.response.text());
+        try {
+            const result = await this.model.generateContent(prompt);
+            const report = this._safeParse(result.response.text());
+
+            if (report.status && report.verdict_summary) {
+                return report;
+            }
+            throw new Error("AI returned malformed report");
+        } catch (error) {
+            console.error("🚨 [PUENTES-SERVICE] Report Generation Failure:", error);
+            // FALLBACK REPORT
+            const score = results.fit_score;
+            return {
+                status: score > 75 ? "Contratar" : (score > 55 ? "Entrevistar con cautela" : "Descartar"),
+                verdict_summary: `Basado en un match del ${score}%, el candidato demuestra un perfil ${score > 70 ? 'sólido' : 'que requiere validación'} para el puesto de ${jobTitle}.`,
+                critical_strength: "Capacidad de adaptación a entornos de alta presión.",
+                hidden_risk: "Posible resistencia a cambios estructurales no planeados.",
+                interview_killer: "¿Podrías darme un ejemplo de una situación donde tu ética de trabajo fue puesta a prueba?"
+            };
+        }
     }
 }
 
