@@ -10,32 +10,40 @@ import api from '../services/api';
 
 const CVWizard = ({ session }) => {
     const navigate = useNavigate();
-    const [step, setStep] = useState(1);
+    const [step, setStep] = useState(() => parseInt(localStorage.getItem('cv_wizard_step')) || 1);
     const [loading, setLoading] = useState(false);
-    const [messages, setMessages] = useState([]);
-    const [data, setData] = useState({
-        name: '',
-        location: '',
-        destination: '',
-        jobDescription: '',
-        currentRole: '',
-        yearsExp: '',
-        rawExperience: '',
-        accomplishments: '',
-        education: '',
-        skills: ''
+    const [messages, setMessages] = useState(() => {
+        const saved = localStorage.getItem('cv_wizard_messages');
+        return saved ? JSON.parse(saved) : [
+            {
+                role: 'assistant',
+                content: "¡Hola! Soy Alex, tu Coach para armar un CV que rompa el mercado. Vamos a construir tu perfil paso a paso. Cuéntame, ¿cuál es tu nombre completo y dónde vives?"
+            }
+        ];
+    });
+    const [data, setData] = useState(() => {
+        const saved = localStorage.getItem('cv_wizard_data');
+        return saved ? JSON.parse(saved) : {
+            name: '',
+            location: '',
+            destination: '',
+            jobDescription: '',
+            currentRole: '',
+            yearsExp: '',
+            rawExperience: '',
+            accomplishments: '',
+            education: '',
+            skills: ''
+        };
     });
 
     const messagesEndRef = useRef(null);
 
     useEffect(() => {
-        // Initial Greeting
-        const welcome = {
-            role: 'assistant',
-            content: "¡Hola! Soy Alex, tu Coach para armar un CV que rompa el mercado. Vamos a construir tu perfil paso a paso. Cuéntame, ¿cuál es tu nombre completo y dónde vives?"
-        };
-        setMessages([welcome]);
-    }, []);
+        localStorage.setItem('cv_wizard_step', step);
+        localStorage.setItem('cv_wizard_messages', JSON.stringify(messages));
+        localStorage.setItem('cv_wizard_data', JSON.stringify(data));
+    }, [step, messages, data]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -132,6 +140,12 @@ const CVWizard = ({ session }) => {
             };
 
             const res = await api.post('/generate-cv', wizardPayload);
+
+            // Clear persistence on success
+            localStorage.removeItem('cv_wizard_step');
+            localStorage.removeItem('cv_wizard_messages');
+            localStorage.removeItem('cv_wizard_data');
+
             navigate('/cv-builder', { state: { ...wizardPayload, ...res.data } });
         } catch (err) {
             alert("Error generando el CV pro. Reintenta.");

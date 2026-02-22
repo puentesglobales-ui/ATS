@@ -31,12 +31,17 @@ const PuentesAssessment = ({ session }) => {
     }, []);
 
     useEffect(() => {
+        // ALWAYS save cvText and jobTitle for memory, other fields only if test started
+        const payload = { cvText, jobTitle };
         if (stage !== 'INIT' && stage !== 'REPORT') {
-            localStorage.setItem('puentes_progress', JSON.stringify({
-                answers, currentIndex, stage, questions, profile, cvText, jobTitle
-            }));
+            payload.answers = answers;
+            payload.currentIndex = currentIndex;
+            payload.stage = stage;
+            payload.questions = questions;
+            payload.profile = profile;
         }
-    }, [answers, currentIndex, stage]);
+        localStorage.setItem('puentes_progress', JSON.stringify(payload));
+    }, [answers, currentIndex, stage, cvText, jobTitle]);
 
     const handleStart = async () => {
         if (!cvText || !jobTitle) return alert("Por favor completa el CV y el Puesto.");

@@ -62,26 +62,44 @@ const CVBuilder = () => {
     const [isOptimizing, setIsOptimizing] = useState(false);
     const [jobDescription, setJobDescription] = useState('');
 
-    // CV DATA STATE
-    const [cvData, setCvData] = useState({
-        personal: { name: 'Tu Nombre', email: 'email@ejemplo.com', phone: '+123456789', location: wizardData.country || 'Ciudad, País', summary: '' },
-        experience: [],
-        education: []
+    const [cvData, setCvData] = useState(() => {
+        const saved = localStorage.getItem('builder_cv_data');
+        return saved ? JSON.parse(saved) : {
+            personal: { name: 'Tu Nombre', email: 'email@ejemplo.com', phone: '+123456789', location: wizardData.country || 'Ciudad, País', summary: '' },
+            experience: [],
+            education: []
+        };
     });
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
 
-    // AI GENERATION ON MOUNT (Only if not already passed)
+    // Persist changes
+    useEffect(() => {
+        localStorage.setItem('builder_cv_data', JSON.stringify(cvData));
+        if (designTokens) localStorage.setItem('builder_design_tokens', JSON.stringify(designTokens));
+        localStorage.setItem('builder_selected_template', selectedTemplate);
+        localStorage.setItem('builder_active_tab', activeTab);
+    }, [cvData, designTokens, selectedTemplate, activeTab]);
+
+    // AI GENERATION ON MOUNT (Only if not already passed or persisted)
     useEffect(() => {
         const fetchGeneratedCV = async () => {
-            // If data and tokens already exist in state (passed from CVWizard), don't fetch again
+            // Priority 1: State from Wizard
             if (location.state?.data && location.state?.tokens) {
                 const { data, tokens } = location.state;
                 setCvData(data);
                 setDesignTokens(tokens);
                 setIsGenerating(false);
                 setActiveTab('content');
+                return;
+            }
+
+            // Priority 2: LocalStorage (Already handled by useState initializers, but sync tokens)
+            const savedTokens = localStorage.getItem('builder_design_tokens');
+            if (savedTokens && !designTokens) {
+                setDesignTokens(JSON.parse(savedTokens));
+                setActiveTab(localStorage.getItem('builder_active_tab') || 'content');
                 return;
             }
 

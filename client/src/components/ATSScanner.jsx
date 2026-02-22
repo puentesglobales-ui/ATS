@@ -16,12 +16,25 @@ const ATSScanner = ({ session }) => {
     }
 
     const [file, setFile] = useState(null);
-    const [cvText, setCvText] = useState('');
-    const [inputMode, setInputMode] = useState('text');
-    const [jobDescription, setJobDescription] = useState('');
+    const [cvText, setCvText] = useState(() => localStorage.getItem('ats_cv_text') || '');
+    const [inputMode, setInputMode] = useState(() => localStorage.getItem('ats_input_mode') || 'text');
+    const [jobDescription, setJobDescription] = useState(() => localStorage.getItem('ats_job_desc') || '');
     const [analyzing, setAnalyzing] = useState(false);
-    const [result, setResult] = useState(null);
+    const [result, setResult] = useState(() => {
+        const saved = localStorage.getItem('ats_last_result');
+        return saved ? JSON.parse(saved) : null;
+    });
     const [error, setError] = useState('');
+
+    // Persist changes
+    React.useEffect(() => {
+        localStorage.setItem('ats_cv_text', cvText);
+        localStorage.setItem('ats_input_mode', inputMode);
+        localStorage.setItem('ats_job_desc', jobDescription);
+        if (result) {
+            localStorage.setItem('ats_last_result', JSON.stringify(result));
+        }
+    }, [cvText, inputMode, jobDescription, result]);
 
     const handleFileChange = (e) => {
         if (e.target.files[0]) setFile(e.target.files[0]);
