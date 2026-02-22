@@ -130,19 +130,20 @@ const CVWizard = ({ session }) => {
         setLoading(true);
         try {
             const wizardPayload = {
-                role: data.destination || "Profesional",
+                role: data.destination || data.currentRole || "Profesional",
                 market: 'Global',
-                jobDescription: data.jobDescription,
+                jobDescription: data.jobDescription || "General",
                 personal: {
-                    name: data.name,
-                    location: data.location
+                    name: data.name || "Candidato",
+                    location: data.location || "Remoto"
                 },
-                profileContent: data.profileSummary,
-                experienceRaw: data.rawExperience,
-                educationAndSkills: data.educationAndSkills,
+                profileContent: data.profileSummary || "",
+                experienceRaw: data.rawExperience || "",
+                educationAndSkills: data.educationAndSkills || "",
                 userId: session?.user?.id
             };
 
+            console.log("🚀 [CV-WIZARD] Sending Payload:", wizardPayload);
             const res = await api.post('/generate-cv', wizardPayload);
 
             // Clear persistence on success
@@ -152,7 +153,9 @@ const CVWizard = ({ session }) => {
 
             navigate('/cv-builder', { state: { ...wizardPayload, ...res.data } });
         } catch (err) {
-            alert("Error generando el CV pro. Reintenta.");
+            console.error("❌ [CV-WIZARD] Generation Failed:", err);
+            const msg = err.response?.data?.message || err.response?.data?.error || "Error de conexión con el motor de IA.";
+            alert(`Error generando el CV pro: ${msg}\n\nPor favor reintenta en unos momentos.`);
         } finally {
             setLoading(false);
         }

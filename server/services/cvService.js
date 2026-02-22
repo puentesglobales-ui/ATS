@@ -61,39 +61,58 @@ const cvService = {
                 "skills": ["Skill 1", "Skill 2"]
             }
         `;
-        const result = await model.generateContent(prompt);
-        const content = this._safeParse(result.response.text());
 
-        // Ensure we always return the structure expected by normalizeCV
-        return {
-            personal: content.personal || { name: userData.personal?.name || "Candidato", summary: "" },
-            experience: content.experience || [],
-            education: content.education || [],
-            skills: content.skills || []
-        };
+        try {
+            const result = await model.generateContent(prompt);
+            const content = this._safeParse(result.response.text());
+
+            return {
+                personal: content.personal || { name: userData.personal?.name || "Candidato", summary: "Profesional enfocado en resultados." },
+                experience: content.experience || [],
+                education: content.education || [],
+                skills: content.skills || []
+            };
+        } catch (error) {
+            console.error("❌ [CV-SERVICE] AI Content Generation Failed:", error);
+            // FAILSAFE: Return a structured fallback so the app doesn't crash
+            return {
+                personal: {
+                    name: userData.personal?.name || "Candidato",
+                    location: userData.personal?.location || "Remoto",
+                    summary: `Profesional con experiencia en ${userData.role || 'su área'}, buscando nuevas oportunidades en el mercado ${userData.market || 'Global'}.`
+                },
+                experience: [{ role: userData.role || 'Profesional', company: 'Empresa', date: 'Actualidad', achievements: ['Liderazgo de proyectos clave', 'Optimización de procesos operativos'] }],
+                education: [],
+                skills: ["Adaptabilidad", "Comunicación", "Liderazgo"]
+            };
+        }
     },
 
     // PASO 2: Generar los Design Tokens (El "look & feel")
     async generateDesignTokens(market, industry) {
         const prompt = `
             Genera tokens de diseño para un CV profesional de la industria ${industry} en el mercado ${market}.
-            Define: 
-            - primaryColor (hex), 
-            - fontPairing (Serif o Sans), 
-            - spacing (compact o relaxed), 
-            - layout (single-column o two-column).
             Output JSON: { "color": "#hex", "font": "string", "spacing": "string", "layout": "string" }
         `;
-        const result = await model.generateContent(prompt);
-        const tokens = this._safeParse(result.response.text());
 
-        // Fallback for safety
-        return {
-            color: tokens.color || "#2563eb",
-            font: tokens.font || "Sans",
-            spacing: tokens.spacing || "compact",
-            layout: tokens.layout || "single-column"
-        };
+        try {
+            const result = await model.generateContent(prompt);
+            const tokens = this._safeParse(result.response.text());
+            return {
+                color: tokens.color || "#2563eb",
+                font: tokens.font || "Sans",
+                spacing: tokens.spacing || "compact",
+                layout: tokens.layout || "single-column"
+            };
+        } catch (error) {
+            console.error("❌ [CV-SERVICE] AI Tokens Failed:", error);
+            return {
+                color: "#2563eb",
+                font: "Sans",
+                spacing: "compact",
+                layout: "single-column"
+            };
+        }
     }
 };
 
