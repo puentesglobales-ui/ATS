@@ -34,29 +34,43 @@ const cvService = {
     async generateContent(userData) {
         const prompt = `
             **IDENTIDAD:** Experto en Recruiting Internacional y Branding Personal.
-            **IDIOMA:** Responde 100% en ESPAÑOL. Tienes prohibido usar inglés a menos que sea un término técnico inevitable.
-            **TAREA:** Transforma los datos conversacionales en un CV de alto impacto.
+            **IDIOMA:** Responde 100% en ESPAÑOL. Tienes prohibido usar inglés (excepto términos técnicos).
+            **TAREA:** Transforma estos datos en un CV de alto impacto.
             
-            **METODOLOGÍA:** 
-            - Usa el método STAR para logros.
-            - Cuantifica resultados (métricas, %, tiempo).
-            - Perfil profesional: Charismático y orientado a resultados.
-            
-            **INPUT DEL USUARIO:** 
-            ${JSON.stringify(userData)}
+            **CONTEXTO DEL CANDIDATO:**
+            - Nombre: ${userData.personal?.name}
+            - Ubicación: ${userData.personal?.location}
+            - Puesto Objetivo: ${userData.role}
+            - Descripción de Vacante (Keywords): ${userData.jobDescription}
+            - Perfil/Superpoder: ${userData.profileContent}
+            - Trayectoria Cruda: ${userData.experienceRaw}
+            - Formación y Skills: ${userData.educationAndSkills}
 
-            **ESTRUCTURA DE SALIDA (JSON ÚNICAMENTE):**
+            **REGLAS DE ORO:** 
+            - Redacta un Resumen Profesional carismático (3-4 líneas).
+            - En Experiencia, usa el método STAR: "Logré X mediante Y resultando en Z (métricas)".
+            - Si faltan fechas o empresas, invéntalas coherentemente basado en el perfil o usa placeholders.
+            
+            **ESTRUCTURA JSON REQUERIDA:**
             {
-                "personal": { "name": "...", "email": "...", "location": "...", "summary": "Perfil Pro en Español" },
+                "personal": { "name": "${userData.personal?.name}", "email": "...", "location": "${userData.personal?.location}", "summary": "..." },
                 "experience": [
-                    { "role": "Cargo", "company": "Empresa", "date": "Periodo", "achievements": ["Logro 1 con métrica", "Logro 2..."] }
+                    { "role": "...", "company": "...", "date": "...", "achievements": ["Logro 1", "Logro 2"] }
                 ],
-                "education": [ { "degree": "Título", "school": "Institución", "date": "Año" } ],
-                "skills": ["Skill 1", "Skill 2", "Skill 3"]
+                "education": [ { "degree": "...", "school": "...", "date": "..." } ],
+                "skills": ["Skill 1", "Skill 2"]
             }
         `;
         const result = await model.generateContent(prompt);
-        return this._safeParse(result.response.text());
+        const content = this._safeParse(result.response.text());
+
+        // Ensure we always return the structure expected by normalizeCV
+        return {
+            personal: content.personal || { name: userData.personal?.name || "Candidato", summary: "" },
+            experience: content.experience || [],
+            education: content.education || [],
+            skills: content.skills || []
+        };
     },
 
     // PASO 2: Generar los Design Tokens (El "look & feel")

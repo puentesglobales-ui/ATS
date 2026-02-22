@@ -85,7 +85,8 @@ const CVWizard = ({ session }) => {
                 }, 800);
             }
             else if (step === 3) {
-                setData(prev => ({ ...prev, currentRole: input.slice(0, 50), rawExperience: input }));
+                // Step 3 is "Profile/Superpower"
+                setData(prev => ({ ...prev, profileSummary: input }));
                 setTimeout(() => {
                     setMessages(prev => [...prev, {
                         role: 'assistant',
@@ -96,7 +97,8 @@ const CVWizard = ({ session }) => {
                 }, 800);
             }
             else if (step === 4) {
-                setData(prev => ({ ...prev, accomplishments: input }));
+                // Step 4 is "Experience"
+                setData(prev => ({ ...prev, rawExperience: input }));
                 setTimeout(() => {
                     setMessages(prev => [...prev, {
                         role: 'assistant',
@@ -107,7 +109,8 @@ const CVWizard = ({ session }) => {
                 }, 800);
             }
             else if (step === 5) {
-                setData(prev => ({ ...prev, education: input, skills: input })); // Mapping input to both temporarily for the prompt
+                // Step 5 is "Education & Skills"
+                setData(prev => ({ ...prev, educationAndSkills: input }));
                 setTimeout(() => {
                     setMessages(prev => [...prev, {
                         role: 'assistant',
@@ -126,16 +129,17 @@ const CVWizard = ({ session }) => {
     const generateFinalCV = async () => {
         setLoading(true);
         try {
-            // Re-map to the structure expected by CVBuilder/Backend
             const wizardPayload = {
-                role: data.destination || data.currentRole,
+                role: data.destination || "Profesional",
                 market: 'Global',
                 jobDescription: data.jobDescription,
-                personal: { name: data.name, location: data.location },
-                rawExperience: data.rawExperience,
-                accomplishments: data.accomplishments,
-                education: data.education,
-                skills: data.skills,
+                personal: {
+                    name: data.name,
+                    location: data.location
+                },
+                profileContent: data.profileSummary,
+                experienceRaw: data.rawExperience,
+                educationAndSkills: data.educationAndSkills,
                 userId: session?.user?.id
             };
 
