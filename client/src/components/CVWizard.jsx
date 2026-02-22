@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Target, Briefcase, Sparkles, ArrowRight, ArrowLeft,
-    CheckCircle, List, Send, Info, ShieldCheck, MapPin,
-    AlertCircle
+    CheckCircle, List, Send, User, MapPin,
+    GraduationCap, Cpu, MessageCircle, Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -12,285 +12,222 @@ const CVWizard = ({ session }) => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [messages, setMessages] = useState([]);
     const [data, setData] = useState({
+        name: '',
+        location: '',
         destination: '',
-        company: '',
         jobDescription: '',
-        country: 'Global',
         currentRole: '',
         yearsExp: '',
-        englishLevel: 'B2',
         rawExperience: '',
         accomplishments: '',
-        selectedSkills: []
+        education: '',
+        skills: ''
     });
 
-    const [analysis, setAnalysis] = useState({
-        jd: null,
-        gap: null,
-        extraction: null
-    });
+    const messagesEndRef = useRef(null);
 
-    const updateData = (key, value) => setData(prev => ({ ...prev, [key]: value }));
+    useEffect(() => {
+        // Initial Greeting
+        const welcome = {
+            role: 'assistant',
+            content: "¡Hola! Soy Alex, tu Coach para armar un CV que rompa el mercado. Vamos a construir tu perfil paso a paso. Cuéntame, ¿cuál es tu nombre completo y dónde vives?"
+        };
+        setMessages([welcome]);
+    }, []);
 
-    const nextStep = async () => {
-        if (step === 1 && data.jobDescription) {
-            setLoading(true);
-            try {
-                const res = await api.post('/cv-wizard/1', {
-                    jobDescription: data.jobDescription,
-                    userId: session?.user?.id
-                });
-                setAnalysis(prev => ({ ...prev, jd: res.data }));
-                setStep(2);
-            } catch (err) { alert("Error analizando la vacante"); }
-            finally { setLoading(false); }
-        }
-        else if (step === 2) {
-            setLoading(true);
-            try {
-                const res = await api.post('/cv-wizard/2', {
-                    currentProfile: { role: data.currentRole, years: data.yearsExp, english: data.englishLevel },
-                    jdAnalysis: analysis.jd,
-                    userId: session?.user?.id
-                });
-                setAnalysis(prev => ({ ...prev, gap: res.data }));
-                setStep(3);
-            } catch (err) { alert("Error calculando el match"); }
-            finally { setLoading(false); }
-        }
-        else if (step === 3) setStep(4);
-        else if (step === 4) setStep(5);
-        else if (step === 5) {
-            setLoading(true);
-            try {
-                // First call step 4 to build impacts
-                const resImpact = await api.post('/cv-wizard/4', {
-                    structuredExperience: data.rawExperience,
-                    accomplishments: data.accomplishments,
-                    userId: session?.user?.id
-                });
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
 
-                // Then call step 5 for final generation
-                const resFinal = await api.post('/cv-wizard/5', {
-                    fullData: {
-                        ...data,
-                        impactExperiences: resImpact.data.impactExperiences,
-                        jdAnalysis: analysis.jd
-                    },
-                    userId: session?.user?.id
-                });
+    const handleNext = async (input) => {
+        const userMsg = { role: 'user', content: input };
+        setMessages(prev => [...prev, userMsg]);
+        setLoading(true);
 
-                // Final redirect to editor with full data
-                navigate('/cv-builder', { state: { ...data, ...analysis, finalAnalysis: resFinal.data } });
-            } catch (err) {
-                console.error(err);
-                alert("Error finalizando el CV");
+        try {
+            if (step === 1) {
+                // Parse Name and Location (Simple split for now or just store)
+                setData(prev => ({ ...prev, name: input.split(',')[0] || input, location: input.split(',')[1] || '' }));
+                setTimeout(() => {
+                    setMessages(prev => [...prev, {
+                        role: 'assistant',
+                        content: `¡Encantado! Ahora, dime: ¿cuál es tu objetivo profesional? ¿Qué puesto buscas? Si tienes el link o texto de una vacante específica, pégalo aquí también para que enfoquemos todo el CV a ganar ese puesto.`
+                    }]);
+                    setStep(2);
+                    setLoading(false);
+                }, 800);
             }
-            finally { setLoading(false); }
-        }
-        else {
-            setStep(s => s + 1);
+            else if (step === 2) {
+                setData(prev => ({ ...prev, jobDescription: input }));
+                setTimeout(() => {
+                    setMessages(prev => [...prev, {
+                        role: 'assistant',
+                        content: `Entendido. Vamos con tu Perfil Profesional. No me des una lista aburrida. Cuéntame en tus palabras: ¿quién eres profesionalmente y cuál es tu "superpoder" que te hace ideal para este rol?`
+                    }]);
+                    setStep(3);
+                    setLoading(false);
+                }, 800);
+            }
+            else if (step === 3) {
+                setData(prev => ({ ...prev, rawExperience: input }));
+                setTimeout(() => {
+                    setMessages(prev => [...prev, {
+                        role: 'assistant',
+                        content: `¡Excelente enfoque! Ahora hablemos de tu trayectoria. Cuéntame sobre tus últimos empleos: empresas, cargos y fechas. No te preocupes por el formato, solo dame la información cruda.`
+                    }]);
+                    setStep(4);
+                    setLoading(false);
+                }, 800);
+            }
+            else if (step === 4) {
+                setData(prev => ({ ...prev, accomplishments: input }));
+                setTimeout(() => {
+                    setMessages(prev => [...prev, {
+                        role: 'assistant',
+                        content: `Casi terminamos. Necesito saber tu formación académica (universidad, cursos clave) y tus habilidades técnicas principales (Software, metodologías, etc.).`
+                    }]);
+                    setStep(5);
+                    setLoading(false);
+                }, 800);
+            }
+            else if (step === 5) {
+                setData(prev => ({ ...prev, education: input })); // We'll simplify education/skills in one go for the conversational flow
+                setTimeout(() => {
+                    setMessages(prev => [...prev, {
+                        role: 'assistant',
+                        content: `¡Listo! He recopilado toda la base estratégica. Ahora mi motor de IA va a ensamblar tu CV de alto rendimiento. ¿Damos el salto al arquitecto final?`
+                    }]);
+                    setStep(6);
+                    setLoading(false);
+                }, 800);
+            }
+        } catch (err) {
+            console.error(err);
+            setLoading(false);
         }
     };
 
-    const prevStep = () => setStep(s => s - 1);
+    const generateFinalCV = async () => {
+        setLoading(true);
+        try {
+            // Re-map to the structure expected by CVBuilder/Backend
+            const wizardPayload = {
+                role: data.destination || data.currentRole,
+                market: 'Global',
+                jobDescription: data.jobDescription,
+                personal: { name: data.name, location: data.location },
+                rawExperience: data.rawExperience,
+                accomplishments: data.accomplishments,
+                education: data.education,
+                skills: data.skills,
+                userId: session?.user?.id
+            };
 
-    const steps = [
-        { id: 1, title: "El Objetivo", icon: <Target className="text-cyan-400" /> },
-        { id: 2, title: "Tu Perfil", icon: <Briefcase className="text-purple-400" /> },
-        { id: 3, title: "Tu Historia", icon: <List className="text-emerald-400" /> },
-        { id: 4, title: "Tus Logros", icon: <Sparkles className="text-yellow-400" /> },
-        { id: 5, title: "Finalizar", icon: <Send className="text-blue-400" /> }
-    ];
+            const res = await api.post('/generate-cv', wizardPayload);
+            navigate('/cv-builder', { state: { ...wizardPayload, ...res.data } });
+        } catch (err) {
+            alert("Error generando el CV pro. Reintenta.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center p-6 font-sans">
-            {/* PROGRESS BAR */}
-            <div className="w-full max-w-4xl flex justify-between mb-12 relative">
-                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-800 -translate-y-1/2 z-0" />
-                {steps.map(s => (
-                    <div key={s.id} className="relative z-10 flex flex-col items-center gap-2">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 border-2 ${step >= s.id ? 'bg-cyan-600 border-cyan-400 shadow-[0_0_15px_rgba(8,145,178,0.4)]' : 'bg-slate-900 border-slate-700 text-slate-500'}`}>
-                            {step > s.id ? <CheckCircle size={20} /> : s.icon}
+        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center font-sans overflow-hidden">
+            {/* PROGRESS HEADER */}
+            <div className="w-full bg-slate-900/50 backdrop-blur-md border-b border-slate-800 p-6 flex justify-center sticky top-0 z-50">
+                <div className="w-full max-w-4xl flex justify-between relative">
+                    {[1, 2, 3, 4, 5, 6].map(s => (
+                        <div key={s} className={`flex flex-col items-center gap-2 transition-all duration-500 ${step >= s ? 'opacity-100' : 'opacity-30'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${step >= s ? 'bg-cyan-600 border-cyan-400' : 'bg-slate-900 border-slate-700 text-slate-500'}`}>
+                                {step > s ? <CheckCircle size={16} /> : <span className="text-xs font-bold">{s}</span>}
+                            </div>
                         </div>
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${step >= s.id ? 'text-cyan-400' : 'text-slate-600'}`}>{s.title}</span>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
 
-            <div className="w-full max-w-3xl">
-                <AnimatePresence mode="wait">
-                    {/* STEP 1: JOB DESCRIPTION */}
-                    {step === 1 && (
-                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                            <div className="space-y-2">
-                                <h1 className="text-4xl font-black tracking-tighter">Define tu <span className="text-cyan-400">Meta Profesional</span></h1>
-                                <p className="text-slate-400 font-medium">Para optimizar tu CV, necesitamos entender exactamente qué tipo de vacante estás buscando.</p>
+            {/* CHAT AREA */}
+            <div className="flex-1 w-full max-w-3xl flex flex-col p-6 space-y-6 overflow-y-auto scrollbar-hide">
+                <AnimatePresence initial={false}>
+                    {messages.map((m, i) => (
+                        <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            className={`flex gap-4 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}
+                        >
+                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${m.role === 'assistant' ? 'bg-cyan-600' : 'bg-white text-slate-950'}`}>
+                                {m.role === 'assistant' ? <Cpu size={20} /> : <User size={20} />}
                             </div>
-
-                            <div className="bg-slate-900/50 border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl space-y-6 backdrop-blur-sm">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest px-2">Job Title</label>
-                                        <input className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl focus:border-cyan-500 transition-all outline-none" placeholder="Ex: Full Stack Developer" value={data.destination} onChange={e => updateData('destination', e.target.value)} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest px-2">País del Mercado</label>
-                                        <select className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl focus:border-cyan-500 outline-none" value={data.country} onChange={e => updateData('country', e.target.value)}>
-                                            <option>USA</option>
-                                            <option>España</option>
-                                            <option>Alemania</option>
-                                            <option>UK</option>
-                                            <option>Global</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest px-2">Job Description (JD)</label>
-                                    <textarea className="w-full h-48 bg-slate-950 border border-slate-800 p-4 rounded-2xl focus:border-cyan-500 transition-all outline-none resize-none" placeholder="Pega los requisitos de la vacante..." value={data.jobDescription} onChange={e => updateData('jobDescription', e.target.value)} />
-                                </div>
+                            <div className={`max-w-[80%] p-5 rounded-[2rem] text-sm leading-relaxed shadow-xl ${m.role === 'assistant' ? 'bg-slate-900 border border-slate-800 text-slate-100 rounded-tl-none' : 'bg-white text-slate-950 rounded-tr-none font-medium'}`}>
+                                {m.content}
                             </div>
                         </motion.div>
-                    )}
-
-                    {/* STEP 2: CURRENT STATUS & GAP */}
-                    {step === 2 && (
-                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-                            <div className="space-y-2">
-                                <h1 className="text-4xl font-black tracking-tighter">Analizando el <span className="text-purple-400">Match</span></h1>
-                                <p className="text-slate-400 font-medium">Comparamos tu perfil actual con los requisitos para detectar brechas críticas.</p>
+                    ))}
+                    {loading && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4">
+                            <div className="w-10 h-10 rounded-2xl bg-cyan-600 flex items-center justify-center animate-pulse">
+                                <Cpu size={20} />
                             </div>
-
-                            {analysis.jd && (
-                                <div className="bg-cyan-600/10 border border-cyan-400/20 p-6 rounded-3xl flex gap-4 items-center">
-                                    <Info className="text-cyan-400 shrink-0" />
-                                    <p className="text-xs text-cyan-100 italic">
-                                        IA detectó: <span className="font-bold text-white uppercase">{analysis.jd.seniorityLevel}</span> para un puesto de <span className="font-bold text-white">{analysis.jd.detectedRole}</span>.
-                                    </p>
-                                </div>
-                            )}
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] space-y-4">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Rol Actual</label>
-                                        <input className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl outline-none focus:border-purple-500" value={data.currentRole} onChange={e => updateData('currentRole', e.target.value)} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Años de Exp.</label>
-                                        <input type="number" className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl outline-none focus:border-purple-500" value={data.yearsExp} onChange={e => updateData('yearsExp', e.target.value)} />
-                                    </div>
-                                </div>
-                                <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] flex flex-col justify-center gap-4">
-                                    <div className="flex justify-between items-center bg-slate-950 p-3 rounded-xl border border-slate-800">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Inglés</span>
-                                        <div className="flex gap-2">
-                                            {['B1', 'B2', 'C1'].map(l => (
-                                                <button key={l} onClick={() => updateData('englishLevel', l)} className={`px-2 py-1 rounded text-[10px] font-bold ${data.englishLevel === l ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-500'}`}>{l}</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* STEP 3: RAW EXPERIENCE */}
-                    {step === 3 && (
-                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-                            <div className="space-y-2">
-                                <h1 className="text-4xl font-black tracking-tighter">Tu <span className="text-emerald-400">Trayectoria Relevante</span></h1>
-                                <p className="text-slate-400 font-medium">Describe tu experiencia de forma narrativa. Menciona tus responsabilidades clave y el contexto de tu trabajo.</p>
-                            </div>
-
-                            {analysis.gap && (
-                                <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-2">
-                                    <div className="flex items-center gap-2 text-yellow-500 text-[10px] font-black uppercase tracking-widest">
-                                        <ShieldCheck size={14} /> Tu Superpoder Detectado:
-                                    </div>
-                                    <p className="text-sm font-medium text-slate-200">{analysis.gap.superpower}</p>
-                                </div>
-                            )}
-
-                            <textarea
-                                className="w-full h-80 bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] focus:border-emerald-500 outline-none text-slate-300 font-medium leading-relaxed shadow-inner"
-                                placeholder="Ej: Empecé en una startup haciendo de todo. A los 6 meses me pasaron a liderar el equipo de frontend..."
-                                value={data.rawExperience}
-                                onChange={e => updateData('rawExperience', e.target.value)}
-                            />
-                        </motion.div>
-                    )}
-
-                    {/* STEP 4: IMPACT (LOGROS) */}
-                    {step === 4 && (
-                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-                            <div className="space-y-2">
-                                <h1 className="text-4xl font-black tracking-tighter">Logros e <span className="text-yellow-400">Impacto Cuantificable</span></h1>
-                                <p className="text-slate-400 font-medium">Este es el corazón de un CV de alto rendimiento. Enfócate en resultados, no solo en tareas.</p>
-                            </div>
-
-                            <div className="grid gap-4">
-                                <div className="p-6 bg-blue-900/10 border border-blue-400/20 rounded-3xl flex gap-4">
-                                    <AlertCircle className="text-blue-400 shrink-0" />
-                                    <p className="text-xs text-blue-200 leading-relaxed">
-                                        <span className="font-bold underline">Tip de Experto:</span> No pongas "Responsable de ventas". Pon "Aumenté las ventas un 20% en 3 meses automatizando el CRM".
-                                    </p>
-                                </div>
-
-                                <textarea
-                                    className="w-full h-64 bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] focus:border-yellow-500 outline-none text-slate-300 font-medium"
-                                    placeholder="¿Redujiste costos? ¿Automatizaste procesos? ¿Lideraste a alguien?"
-                                    value={data.accomplishments}
-                                    onChange={e => updateData('accomplishments', e.target.value)}
-                                />
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* STEP 5: FINAL PREVIEW */}
-                    {step === 5 && (
-                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center text-center space-y-8 py-12">
-                            <div className="w-24 h-24 bg-cyan-600/10 rounded-full flex items-center justify-center text-cyan-400 animate-pulse">
-                                <Sparkles size={48} />
-                            </div>
-                            <div className="space-y-2">
-                                <h2 className="text-4xl font-black">El Constructor está <span className="text-cyan-400">Listo</span></h2>
-                                <p className="text-slate-400 max-w-md mx-auto">
-                                    Hemos construido conciencia y estrategia. Ahora el algoritmo ensamblará tu versión de alto rendimiento.
-                                </p>
-                            </div>
-
-                            <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-[10px] text-slate-500 font-mono tracking-widest uppercase">
-                                Pipeline: Extraction → Gap Analysis → Impact Builder → ATS Review
+                            <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 flex gap-2">
+                                <span className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                <span className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                <span className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce"></span>
                             </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
+                <div ref={messagesEndRef} />
+            </div>
 
-                {/* NAVIGATION BUTTONS */}
-                <div className="flex justify-between items-center mt-12 pt-8 border-t border-slate-900">
-                    {step > 1 ? (
-                        <button onClick={prevStep} className="flex items-center gap-2 px-6 py-3 font-black uppercase text-xs tracking-widest text-slate-500 hover:text-white transition-all">
-                            <ArrowLeft size={16} /> Volver
+            {/* INPUT AREA */}
+            <div className="w-full max-w-4xl p-6 bg-slate-950">
+                {step < 6 ? (
+                    <div className="relative group">
+                        <textarea
+                            disabled={loading}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleNext(e.target.value);
+                                    e.target.value = '';
+                                }
+                            }}
+                            className="w-full bg-slate-900 border-2 border-slate-800 rounded-3xl p-6 pr-20 text-white focus:outline-none focus:border-cyan-500 transition-all font-medium resize-none shadow-2xl"
+                            placeholder="Escribe aquí tu respuesta..."
+                            rows={3}
+                        />
+                        <button
+                            disabled={loading}
+                            onClick={() => {
+                                const el = document.querySelector('textarea');
+                                handleNext(el.value);
+                                el.value = '';
+                            }}
+                            className="absolute right-4 bottom-4 w-12 h-12 bg-white text-slate-950 rounded-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-xl disabled:opacity-50"
+                        >
+                            <ArrowRight />
                         </button>
-                    ) : <div />}
-
-                    <button
-                        onClick={nextStep}
+                    </div>
+                ) : (
+                    <motion.button
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        onClick={generateFinalCV}
                         disabled={loading}
-                        className="px-10 py-5 bg-white text-slate-950 font-black rounded-2xl flex items-center gap-3 hover:scale-[1.05] transition-all shadow-xl shadow-cyan-600/10 disabled:opacity-50"
+                        className="w-full py-6 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-black text-xl uppercase tracking-widest rounded-3xl shadow-[0_0_40px_rgba(8,145,178,0.3)] flex items-center justify-center gap-4 hover:brightness-110 transition-all"
                     >
-                        {loading ? <Loader className="animate-spin" /> : <span>{step === 5 ? 'Generar Perfil Pro' : 'Continuar'}</span>}
-                        <ArrowRight size={20} />
-                    </button>
-                </div>
+                        {loading ? <Loader2 className="animate-spin" /> : <Sparkles size={24} />}
+                        {loading ? 'Preparando Arquitectura...' : 'Generar Mi CV de Alto Rendimiento'}
+                    </motion.button>
+                )}
+                <p className="text-center text-[10px] text-slate-600 mt-4 uppercase tracking-[0.2em] font-black">Powered by Alex Coach Engine v5.1</p>
             </div>
         </div>
     );
 };
-
-const Loader = ({ className }) => <div className={`w-5 h-5 border-2 border-slate-900 border-t-transparent rounded-full ${className}`}></div>;
 
 export default CVWizard;

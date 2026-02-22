@@ -15,14 +15,27 @@ const cvService = {
     // PASO 1: Generar el contenido redactado profesionalmente
     async generateContent(userData) {
         const prompt = `
-            Identidad: Experto en Recruiting para mercado ${userData.market || 'Global'}.
-            Tarea: Transforma la experiencia bruta en logros con métricas (Metodología STAR).
-            Input: ${JSON.stringify(userData.rawData || userData)}
-            Restricciones: Output JSON puro con campos: 
-            personal: {name, email, summary}, 
-            experience: [ {role, company, date, achievements: []} ], 
-            education: [ {degree, school, date} ],
-            skills: [] (array de strings).
+            **IDENTIDAD:** Experto en Recruiting Internacional y Branding Personal.
+            **IDIOMA:** Responde 100% en ESPAÑOL. Tienes prohibido usar inglés a menos que sea un término técnico inevitable.
+            **TAREA:** Transforma los datos conversacionales en un CV de alto impacto.
+            
+            **METODOLOGÍA:** 
+            - Usa el método STAR para logros.
+            - Cuantifica resultados (métricas, %, tiempo).
+            - Perfil profesional: Charismático y orientado a resultados.
+            
+            **INPUT DEL USUARIO:** 
+            ${JSON.stringify(userData)}
+
+            **ESTRUCTURA DE SALIDA (JSON ÚNICAMENTE):**
+            {
+                "personal": { "name": "...", "email": "...", "location": "...", "summary": "Perfil Pro en Español" },
+                "experience": [
+                    { "role": "Cargo", "company": "Empresa", "date": "Periodo", "achievements": ["Logro 1 con métrica", "Logro 2..."] }
+                ],
+                "education": [ { "degree": "Título", "school": "Institución", "date": "Año" } ],
+                "skills": ["Skill 1", "Skill 2", "Skill 3"]
+            }
         `;
         const result = await model.generateContent(prompt);
         return JSON.parse(result.response.text());

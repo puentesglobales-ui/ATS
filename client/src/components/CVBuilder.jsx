@@ -72,31 +72,33 @@ const CVBuilder = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
 
-    // AI GENERATION ON MOUNT
+    // AI GENERATION ON MOUNT (Only if not already passed)
     useEffect(() => {
         const fetchGeneratedCV = async () => {
+            // If data and tokens already exist in state (passed from CVWizard), don't fetch again
+            if (location.state?.data && location.state?.tokens) {
+                const { data, tokens } = location.state;
+                setCvData(data);
+                setDesignTokens(tokens);
+                setIsGenerating(false);
+                setActiveTab('content');
+                return;
+            }
+
             if (!wizardData.role) return;
 
             setIsGenerating(true);
             try {
                 const response = await api.post('/generate-cv', wizardData);
-
-                // Assuming api.post returns data nested under data (axios behavior)
-                const data = response.data;
+                const result = response.data;
 
                 // Merge AI data with state
-                setCvData(prev => ({
-                    ...prev,
-                    personal: { ...prev.personal, ...data.personal },
-                    experience: data.experience || [],
-                    education: data.education || []
-                }));
-
+                setCvData(result.data);
+                setDesignTokens(result.tokens);
                 setActiveTab('content');
 
             } catch (error) {
                 console.error("AI Generation Failed:", error);
-                // Fallback to mock data on error so user isn't stuck
                 setCvData(prev => ({
                     ...prev,
                     personal: {
@@ -111,7 +113,7 @@ const CVBuilder = () => {
         };
 
         fetchGeneratedCV();
-    }, [wizardData]);
+    }, [wizardData, location.state]);
 
     const filteredTemplates = TEMPLATES.filter(t =>
         t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
