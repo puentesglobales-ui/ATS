@@ -942,40 +942,42 @@ app.post('/api/interview/speak', upload.single('audio'), async (req, res) => {
     const stage = responseObj.stage;
 
     if (!assistantText) {
-      return res.json({ userText, assistantText: "I'm sorry, I couldn't generate a response.", feedback, stage, audioBase64: null });
+      return res.json({ userText, assistantText: "Lo siento, no pude generar una respuesta.", feedback, stage, audioBase64: null });
     }
 
-    // 3. TTS: ElevenLabs
-    currentStage = 'TTS (ElevenLabs)';
+    // 3. TTS: Google TTS (with correct language)
+    currentStage = 'TTS (Google)';
 
     const crypto = require('crypto');
     const cacheDir = 'audio_cache';
     if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
 
-    const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
-    const hash = crypto.createHash('md5').update(assistantText + ELEVENLABS_VOICE_ID).digest('hex');
+    // Determine TTS language based on user's selected language
+    const ttsLang = userLang.toLowerCase().startsWith('es') ? 'es' : userLang.substring(0, 2).toLowerCase();
+    const hash = crypto.createHash('md5').update(assistantText + ttsLang).digest('hex');
     const cachePath = path.join(cacheDir, `${hash}.mp3`);
 
-    let audioBase64;
+    let audioBase64 = null;
     if (fs.existsSync(cachePath)) {
       audioBase64 = fs.readFileSync(cachePath).toString('base64');
       console.log('✅ Audio loaded from cache');
     } else {
-      console.log('Generating new audio with Google TTS (FREE) 🎉');
+      console.log(`🔊 Generating TTS in "${ttsLang}" with Google TTS (FREE) 🎉`);
       try {
         const googleTTS = require('google-tts-api');
         const ttsUrl = googleTTS.getAudioUrl(assistantText, {
-          lang: 'en',
+          lang: ttsLang,
           slow: false,
           host: 'https://translate.google.com'
         });
         const ttsResponse = await axios.get(ttsUrl, { responseType: 'arraybuffer' });
         fs.writeFileSync(cachePath, Buffer.from(ttsResponse.data));
         audioBase64 = Buffer.from(ttsResponse.data).toString('base64');
-        console.log('✅ Google TTS Success (Cost: $0.00)');
+        console.log(`✅ Google TTS Success (lang: ${ttsLang}, Cost: $0.00)`);
       } catch (err) {
-        console.error('[ERROR] Google TTS Failed:', err.message);
-        throw err;
+        console.error('[WARN] Google TTS Failed (non-critical):', err.message);
+        // Don't throw — return text response without audio
+        audioBase64 = null;
       }
     }
 

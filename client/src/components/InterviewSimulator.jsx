@@ -114,6 +114,8 @@ const InterviewSimulator = ({ session }) => {
         formData.append('jobDescription', jobDesc);
         formData.append('messages', JSON.stringify(messages));
         formData.append('mode', mode);
+        formData.append('userId', session?.user?.id || '');
+        formData.append('language', 'es');
 
         try {
             const { data } = await api.post('/interview/speak', formData, {
@@ -129,18 +131,47 @@ const InterviewSimulator = ({ session }) => {
 
             if (data.feedback) setCurrentFeedback(data.feedback);
 
+            // Play audio: Server TTS or Browser SpeechSynthesis fallback
             setIsSpeaking(true);
-            const audioData = data.audioBase64;
-            const audio = new Audio(`data:audio/mp3;base64,${audioData}`);
-            audio.onended = () => setIsSpeaking(false);
-            audio.play();
+            if (data.audioBase64) {
+                const audio = new Audio(`data:audio/mp3;base64,${data.audioBase64}`);
+                audio.onended = () => setIsSpeaking(false);
+                audio.onerror = () => {
+                    // Fallback to browser speech if audio fails
+                    speakWithBrowser(data.assistantText);
+                };
+                audio.play().catch(() => speakWithBrowser(data.assistantText));
+            } else {
+                // No audio from server — use browser speech
+                speakWithBrowser(data.assistantText);
+            }
 
         } catch (error) {
             console.error("Error processing audio:", error);
-            alert("Error procesando audio. ¿Servidor online?");
+            alert("Error procesando audio. Verificá que el servidor esté online y que tengas una OPENAI_API_KEY válida para Whisper.");
         } finally {
             setProcessing(false);
         }
+    };
+
+    // Browser SpeechSynthesis fallback for TTS
+    const speakWithBrowser = (text) => {
+        if (!text || !window.speechSynthesis) {
+            setIsSpeaking(false);
+            return;
+        }
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'es-ES';
+        utterance.rate = 0.95;
+        utterance.pitch = 1.0;
+        // Try to find a good Spanish voice
+        const voices = window.speechSynthesis.getVoices();
+        const spanishVoice = voices.find(v => v.lang.startsWith('es') && v.name.includes('Google'))
+            || voices.find(v => v.lang.startsWith('es'));
+        if (spanishVoice) utterance.voice = spanishVoice;
+        utterance.onend = () => setIsSpeaking(false);
+        utterance.onerror = () => setIsSpeaking(false);
+        window.speechSynthesis.speak(utterance);
     };
 
     if (loadingProfile) {
