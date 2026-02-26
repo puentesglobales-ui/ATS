@@ -217,7 +217,7 @@ const checkUsage = async (userId, usageType = 'general') => {
   try {
     let { data: profile, error: selectError } = await supabaseAdmin
       .from('profiles')
-      .select('usage_count, is_premium, role, email, credits_ats, credits_roleplay')
+      .select('usage_count, is_premium, role, email, credits_ats, credits_roleplay, credits_psychometric')
       .eq('id', userId)
       .single();
 
@@ -225,7 +225,7 @@ const checkUsage = async (userId, usageType = 'general') => {
       console.log('⚠️ Profile missing. Creating default profile...');
       const { data: newProfile, error: createError } = await supabaseAdmin
         .from('profiles')
-        .insert([{ id: userId, usage_count: 0, is_premium: false, credits_ats: 1, credits_roleplay: 1 }])
+        .insert([{ id: userId, usage_count: 0, is_premium: false, credits_ats: 1, credits_roleplay: 1, credits_psychometric: 1 }])
         .select()
         .single();
       if (createError) {
@@ -251,6 +251,9 @@ const checkUsage = async (userId, usageType = 'general') => {
       } else if (usageType === 'roleplay') {
         hasCredit = (profile.credits_roleplay || 0) > 0;
         limitMsg = '🎤 ¡Gran sesión de práctica! Ya completaste tu simulación de entrevista gratis. Para sesiones ilimitadas con feedback avanzado, agenda tu llamada estratégica gratuita en Calendly o habla con Alex por WhatsApp.';
+      } else if (usageType === 'psychometric') {
+        hasCredit = (profile.credits_psychometric || 0) > 0;
+        limitMsg = '🧠 ¡Ya completaste tu evaluación psicométrica! Tu perfil fue analizado con éxito. Para evaluaciones ilimitadas y reportes premium, agenda tu llamada estratégica gratuita en Calendly o habla con Alex por WhatsApp.';
       } else {
         // Fallback or other types checking general usage_count if needed
         hasCredit = true;
@@ -705,6 +708,21 @@ app.post('/api/workpass/submit', async (req, res) => {
   try {
     if (!responses || !profile) return res.status(400).json({ error: "Missing test responses or role profile" });
 
+    // CREDIT CHECK
+    if (userId) {
+      const usageCheck = await checkUsage(userId, 'psychometric');
+      if (!usageCheck.allowed) {
+        return res.status(usageCheck.status || 402).json({
+          error: 'Limit Reached',
+          message: usageCheck.message,
+          cta: {
+            calendly: 'https://calendly.com/puentesglobales/agendar',
+            whatsapp: 'https://wa.me/447537130727'
+          }
+        });
+      }
+    }
+
     // 1. Math Calculation (Stateless)
     const results = puentesGlobales.calculateResults(responses, profile);
 
@@ -722,6 +740,10 @@ app.post('/api/workpass/submit', async (req, res) => {
           ai_analysis: report
         }]);
       } catch (dbErr) { console.warn("DB Report Persist Failed:", dbErr.message); }
+
+      // Decrement psychometric credit
+      supabaseAdmin.rpc('decrement_credit', { p_user_id: userId, p_type: 'psychometric' })
+        .then(({ error }) => { if (error) console.error('Error decrementing psychometric credit:', error); });
     }
 
     res.json({ results, report });
@@ -863,6 +885,21 @@ app.post('/api/psychometric/submit', async (req, res) => {
   }
 
   try {
+    // CREDIT CHECK
+    if (userData.userId) {
+      const usageCheck = await checkUsage(userData.userId, 'psychometric');
+      if (!usageCheck.allowed) {
+        return res.status(usageCheck.status || 402).json({
+          error: 'Limit Reached',
+          message: usageCheck.message,
+          cta: {
+            calendly: 'https://calendly.com/puentesglobales/agendar',
+            whatsapp: 'https://wa.me/447537130727'
+          }
+        });
+      }
+    }
+
     // 1. Calculate Core Scores
     const dass21 = psychometricService.calculateDASS21(answers);
     const flow = psychometricService.calculateFlow(answers);
@@ -893,6 +930,10 @@ app.post('/api/psychometric/submit', async (req, res) => {
       } catch (dbErr) {
         console.warn("DB Psychometric Save Error:", dbErr.message);
       }
+
+      // Decrement psychometric credit
+      supabaseAdmin.rpc('decrement_credit', { p_user_id: userData.userId, p_type: 'psychometric' })
+        .then(({ error }) => { if (error) console.error('Error decrementing psychometric credit:', error); });
     }
 
     res.json({

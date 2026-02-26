@@ -1,18 +1,41 @@
--- Update credits_roleplay default from 20 to 1 (one free session)
--- Run this in Supabase SQL Editor
-
--- 1. Change the default value for new users
+-- =====================================================
+-- PASO 1: Crear columnas si no existen
+-- =====================================================
 ALTER TABLE public.profiles 
-ALTER COLUMN credits_roleplay SET DEFAULT 1;
+ADD COLUMN IF NOT EXISTS credits_ats INT DEFAULT 1;
 
--- 2. Reset existing free users to 1 credit (don't touch premium/admin)
-UPDATE public.profiles 
-SET credits_roleplay = 1 
-WHERE credits_roleplay > 1 
-  AND is_premium = false 
-  AND role != 'admin';
+ALTER TABLE public.profiles 
+ADD COLUMN IF NOT EXISTS credits_roleplay INT DEFAULT 1;
 
--- 3. Verify
+-- =====================================================
+-- PASO 2: Setear valores iniciales
+-- =====================================================
+UPDATE public.profiles SET credits_ats = 1 WHERE credits_ats IS NULL;
+UPDATE public.profiles SET credits_roleplay = 1 WHERE credits_roleplay IS NULL;
+
+-- =====================================================
+-- PASO 3: Funcion para decrementar creditos
+-- =====================================================
+CREATE OR REPLACE FUNCTION decrement_credit(p_user_id UUID, p_type TEXT) 
+RETURNS VOID AS $$
+BEGIN
+    IF p_type = 'ats' THEN
+        UPDATE public.profiles 
+        SET credits_ats = GREATEST(credits_ats - 1, 0),
+            usage_count = COALESCE(usage_count, 0) + 1
+        WHERE id = p_user_id;
+    ELSIF p_type = 'roleplay' THEN
+        UPDATE public.profiles 
+        SET credits_roleplay = GREATEST(credits_roleplay - 1, 0),
+            usage_count = COALESCE(usage_count, 0) + 1
+        WHERE id = p_user_id;
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =====================================================
+-- PASO 4: Verificar
+-- =====================================================
 SELECT id, email, credits_ats, credits_roleplay, is_premium, role 
 FROM public.profiles 
 ORDER BY role DESC, email;
