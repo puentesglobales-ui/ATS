@@ -1,24 +1,68 @@
-// aiRouter.js for Career Mastery Engine (CommonJS)
-// Orchestrates AI calls with priority: Gemini 2.0 Flash -> DeepSeek / ChatGPT (Fallback)
+/**
+ * =====================================================================
+ * 🧠 AI ROUTER v2.0 — Career Mastery Engine
+ * 
+ * Orchestrates AI calls with INTELLIGENT routing:
+ * - Gemini 1.5 Flash (Primary — FREE)
+ * - Claude 3.5 Sonnet (Deep reasoning — MEDIUM COST)
+ * - DeepSeek Chat (Fallback — LOW COST)
+ * - GPT-4o-mini (Final guarantee — PAID)
+ * 
+ * Features:
+ * - Phase-aware routing (different models for different interview phases)
+ * - Timeout + retry per provider
+ * - Automatic fallback chain
+ * - Provider usage logging
+ * =====================================================================
+ */
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const axios = require('axios');
 require('dotenv').config();
 
-// --- Configuration ---
-const GENAI_API_KEY = process.env.GEMINI_API_KEY; // Google AI Studio Key
+// ─── CONFIGURATION ───────────────────────────────────────────────────
+
+const GENAI_API_KEY = process.env.GEMINI_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 
-// Check mandatory key
-if (!GENAI_API_KEY) {
-    console.warn("⚠️ WARNING: GEMINI_API_KEY is missing. Gemini Fallback will not work.");
-}
+// Startup checks
+if (!GENAI_API_KEY) console.warn("⚠️ WARNING: GEMINI_API_KEY is missing.");
+if (!ANTHROPIC_API_KEY) console.warn("⚠️ WARNING: ANTHROPIC_API_KEY is missing. Claude fallback disabled.");
+if (!DEEPSEEK_API_KEY) console.warn("⚠️ WARNING: DEEPSEEK_API_KEY is missing. DeepSeek fallback disabled.");
+if (!OPENAI_API_KEY) console.warn("⚠️ WARNING: OPENAI_API_KEY is missing. OpenAI fallback disabled.");
 
-// System Prompts & Personas
+// ─── PROVIDER CONFIG ─────────────────────────────────────────────────
+
+const PROVIDER_CONFIG = {
+    gemini: { timeout: 15000, retries: 1, cost_tier: 'FREE', model: 'gemini-1.5-flash' },
+    claude: { timeout: 20000, retries: 1, cost_tier: 'MEDIUM', model: 'claude-3-5-sonnet-20241022' },
+    deepseek: { timeout: 15000, retries: 0, cost_tier: 'LOW', model: 'deepseek-chat' },
+    openai: { timeout: 20000, retries: 0, cost_tier: 'PAID', model: 'gpt-4o-mini' }
+};
+
+// ─── PHASE-AWARE ROUTING ─────────────────────────────────────────────
+// Uses Claude for phases requiring deeper reasoning
+
+const PHASE_ROUTING = {
+    'ICEBREAKER': 'gemini',   // Fast, free, sufficient for rapport
+    'CV_DEEP_DIVE': 'gemini',   // Fast analysis, free tier
+    'SITUATIONAL': 'claude',   // Best reasoning for STAR analysis
+    'PRESSURE': 'claude',   // Best tone control under stress mode
+    'CLOSING': 'claude',   // Best summary and report generation
+    'FINAL_REPORT': 'claude',   // Extended analysis
+    'DEFAULT': 'gemini'    // Default for unspecified phases
+};
+
+// Fallback chain order
+const FALLBACK_CHAIN = ['gemini', 'claude', 'deepseek', 'openai'];
+
+// ─── PERSONAS ────────────────────────────────────────────────────────
+// Kept for backward compatibility with other services that import PERSONAS
+
 const PERSONAS = {
-    // 1. The Ally (Feedback-Driven)
     RECRUITER_ALLY: `
     **IDENTITY:** You are "Alex", a friendly and supportive Career Coach acting as a Recruiter.
     **GOAL:** Build the candidate's confidence while correcting technical mistakes and improving answer structure.
@@ -35,12 +79,10 @@ const PERSONAS = {
     **ESTILO:** Empático, paciente, educativo.
     **COMPORTAMIENTO:**
     - Haz preguntas estándar de RRHH (Háblame de ti, Fortalezas/Debilidades).
-    - Después de CADA respuesta, da feedback inmediato y amable: "Eso estuvo bien, pero intenta enfatizar más X logro."
+    - Después de CADA respuesta, da feedback inmediato y amable.
     - Valida emociones: "Entiendo que puedas estar nervioso, tómate tu tiempo."
-    - Ideal para principiantes o candidatos nerviosos.
     `,
 
-    // 2. The Technical (Hard Skills)
     RECRUITER_TECHNICAL: `
     **IDENTITY:** You are "Eng. Marcus", a Senior Technical Lead and Subject Matter Expert.
     **GOAL:** Validate specific hard skills and technical depth for the role.
@@ -56,13 +98,11 @@ const PERSONAS = {
     **OBJETIVO:** Validar habilidades técnicas específicas y profundidad técnica para el puesto.
     **ESTILO:** Directo, analítico, enfocado en datos, serio.
     **COMPORTAMIENTO:**
-    - Analiza el CV profundamente y haz preguntas técnicas específicas: "¿Cómo resolverías X?", "Explica el concepto Y".
+    - Analiza el CV profundamente y haz preguntas técnicas específicas.
     - Ignora errores gramaticales menores; enfócate en la precisión técnica y lógica.
     - Si una respuesta es vaga, profundiza de inmediato: "Dame un ejemplo concreto con métricas."
-    - No pierdas tiempo en cortesías.
     `,
 
-    // 3. The Stress Test (Bad Cop)
     RECRUITER_STRESS: `
     **IDENTITY:** You are "Ms. Victoria", a tough, skeptical, and high-standards Senior Recruiter.
     **GOAL:** Test the candidate's resilience, stress management, and diplomacy under pressure.
@@ -78,12 +118,11 @@ const PERSONAS = {
     **OBJETIVO:** Evaluar la resiliencia del candidato, su manejo del estrés y su diplomacia bajo presión.
     **ESTILO:** Frío, desafiante, intimidante, a veces interrumpe.
     **COMPORTAMIENTO:**
-    - Cuestiona cada premisa: "¿Por qué deberíamos contratarte a ti y no al otro candidato que tiene más experiencia?", "¿Esos huecos en tu CV son porque te despidieron?".
+    - Cuestiona cada premisa.
     - Usa silencios o comentarios cortantes: "¿Eso es todo?", "No me convence".
     - Evalúa si el candidato pierde los papeles o se mantiene profesional.
     `,
 
-    // Language Helper
     LANGUAGE_RULE: (lang) => {
         const isEsp = lang.toLowerCase() === 'es';
         return isEsp
@@ -92,79 +131,125 @@ const PERSONAS = {
     }
 };
 
-// --- Main Logic Router (Complexity & Fallbacks) ---
+// ─── MAIN FUNCTION: generateResponse ─────────────────────────────────
 
 /**
- * generateResponse: Simplified chat response for standard personas.
+ * generateResponse: Standard chat response with optional phase-aware routing.
+ * 
+ * @param {string} userMessage - The user's message
+ * @param {string} personaKeyOrPrompt - A PERSONAS key or a full system prompt string
+ * @param {Array} history - Chat history array [{role, content}, ...]
+ * @param {string} phase - Interview phase for intelligent routing (optional)
+ * @returns {string} - AI response text
  */
-async function generateResponse(userMessage, personaKeyOrPrompt = 'RECRUITER_ALLY', history = []) {
+async function generateResponse(userMessage, personaKeyOrPrompt = 'RECRUITER_ALLY', history = [], phase = 'DEFAULT') {
     let systemPrompt = PERSONAS[personaKeyOrPrompt] || personaKeyOrPrompt;
     try {
         const result = await routeRequest({
             prompt: userMessage,
             system_instruction: systemPrompt,
-            history: history
+            history: history,
+            phase: phase
         });
         return result.text;
     } catch (error) {
+        console.error("❌ generateResponse failed:", error.message);
         return "I'm having trouble connecting. Could you repeat that?";
     }
 }
 
+// ─── CORE ROUTER ─────────────────────────────────────────────────────
+
 /**
- * routeRequest: High-level orchestral function for complex tasks.
- * Signature matches careerCoach and psychometricService expectations.
+ * routeRequest: Intelligent routing with phase awareness and fallback chain.
  */
 async function routeRequest(config = {}, options = {}) {
-    const { prompt, complexity = 'medium', system_instruction = null, providerOverride = 'auto', history = [] } = config;
+    const {
+        prompt,
+        system_instruction = null,
+        providerOverride = 'auto',
+        history = [],
+        phase = 'DEFAULT'
+    } = config;
 
-    // Choose primary provider based on complexity or override
-    // For 'hard' complexity, we prefer Gemini 1.5 Pro if available, or just Gemini Flash as stable base.
+    // Determine primary provider based on phase or override
+    let primaryProvider = providerOverride !== 'auto'
+        ? providerOverride
+        : (PHASE_ROUTING[phase] || PHASE_ROUTING['DEFAULT']);
+
+    // Build provider chain: primary first, then fallbacks (excluding primary)
+    const providerChain = [primaryProvider, ...FALLBACK_CHAIN.filter(p => p !== primaryProvider)];
 
     let responseText = null;
+    let providerUsed = null;
 
-    try {
-        // 1. Try Primary (Gemini)
-        if (GENAI_API_KEY && (providerOverride === 'auto' || providerOverride === 'google')) {
-            responseText = await callGeminiFlash(prompt, system_instruction || "You are a helpful AI.", history, options);
-        }
-    } catch (error) {
-        console.error("❌ routeRequest Primary Fail:", error.message);
-    }
+    for (const provider of providerChain) {
+        if (responseText) break;
 
-    // 2. Fallbacks
-    if (!responseText) {
-        try {
-            if (DEEPSEEK_API_KEY && (providerOverride === 'auto' || providerOverride === 'deepseek')) {
-                responseText = await callDeepSeek(prompt, system_instruction, [], options);
-            } else if (OPENAI_API_KEY && (providerOverride === 'auto' || providerOverride === 'openai')) {
-                responseText = await callOpenAI(prompt, system_instruction, [], options);
+        const config_p = PROVIDER_CONFIG[provider];
+        const maxAttempts = 1 + (config_p.retries || 0);
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                const startTime = Date.now();
+
+                switch (provider) {
+                    case 'gemini':
+                        if (!GENAI_API_KEY) continue;
+                        responseText = await callGeminiFlash(prompt, system_instruction, history, options);
+                        break;
+                    case 'claude':
+                        if (!ANTHROPIC_API_KEY) continue;
+                        responseText = await callClaude(prompt, system_instruction, history, options);
+                        break;
+                    case 'deepseek':
+                        if (!DEEPSEEK_API_KEY) continue;
+                        responseText = await callDeepSeek(prompt, system_instruction, history, options);
+                        break;
+                    case 'openai':
+                        if (!OPENAI_API_KEY) continue;
+                        responseText = await callOpenAI(prompt, system_instruction, history, options);
+                        break;
+                }
+
+                if (responseText) {
+                    const elapsed = Date.now() - startTime;
+                    providerUsed = provider;
+                    console.log(`🧠 Cerebro: ${provider} (${config_p.model}) | ${config_p.cost_tier} | ${elapsed}ms | Phase: ${phase}`);
+                    break;
+                }
+            } catch (error) {
+                console.error(`❌ ${provider} attempt ${attempt}/${maxAttempts} failed:`, error.message);
+                if (attempt < maxAttempts) {
+                    console.log(`🔄 Retrying ${provider}...`);
+                    await sleep(500); // Brief pause before retry
+                }
             }
-        } catch (error) {
-            console.error("❌ routeRequest Fallback Fail:", error.message);
         }
     }
 
-    if (!responseText) throw new Error("AI Router failed to generate a response from any provider.");
+    if (!responseText) {
+        throw new Error("AI Router: All providers failed to generate a response.");
+    }
 
     return {
         text: responseText,
-        source: responseText ? "ai_engine" : "none"
+        provider: providerUsed,
+        cost_tier: PROVIDER_CONFIG[providerUsed]?.cost_tier || 'UNKNOWN',
+        source: "ai_engine"
     };
 }
 
-// --- Specific AI Implementations ---
+// ─── PROVIDER IMPLEMENTATIONS ────────────────────────────────────────
 
 async function callGeminiFlash(message, systemPrompt, history, options = {}) {
     if (!GENAI_API_KEY) return null;
 
     try {
         const genAI = new GoogleGenerativeAI(GENAI_API_KEY);
-
-        // Handle JSON mode if requested (Gemini 1.5 supports it)
         const modelConfig = {
-            model: "gemini-1.5-flash",
-            systemInstruction: systemPrompt
+            model: PROVIDER_CONFIG.gemini.model,
+            systemInstruction: systemPrompt || "You are a helpful AI."
         };
 
         if (options.response_format && options.response_format.type === "json_object") {
@@ -172,7 +257,6 @@ async function callGeminiFlash(message, systemPrompt, history, options = {}) {
         }
 
         const model = genAI.getGenerativeModel(modelConfig);
-
         const chat = model.startChat({
             history: formatHistoryForGemini(history),
             generationConfig: {
@@ -181,11 +265,66 @@ async function callGeminiFlash(message, systemPrompt, history, options = {}) {
             }
         });
 
-        const result = await chat.sendMessage(message);
+        const result = await Promise.race([
+            chat.sendMessage(message),
+            timeoutPromise(PROVIDER_CONFIG.gemini.timeout, 'Gemini')
+        ]);
+
         const response = await result.response;
         return response.text();
     } catch (err) {
         console.error("❌ Gemini API Error:", err.message);
+        throw err;
+    }
+}
+
+async function callClaude(message, systemPrompt, history, options = {}) {
+    if (!ANTHROPIC_API_KEY) return null;
+
+    try {
+        // Build messages array (Claude format)
+        const messages = [];
+
+        // Add history (exclude system messages — Claude uses separate system param)
+        for (const msg of history) {
+            if (msg.role === 'system') continue;
+            messages.push({
+                role: msg.role === 'user' ? 'user' : 'assistant',
+                content: msg.content
+            });
+        }
+
+        // Add current user message
+        messages.push({ role: 'user', content: message });
+
+        // Ensure messages alternate and start with 'user'
+        const cleanMessages = cleanMessagesForClaude(messages);
+
+        const payload = {
+            model: PROVIDER_CONFIG.claude.model,
+            max_tokens: 2048,
+            system: systemPrompt || "You are a helpful AI assistant.",
+            messages: cleanMessages
+        };
+
+        if (options.temperature !== undefined) {
+            payload.temperature = options.temperature;
+        }
+
+        const response = await Promise.race([
+            axios.post('https://api.anthropic.com/v1/messages', payload, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': ANTHROPIC_API_KEY,
+                    'anthropic-version': '2023-06-01'
+                }
+            }),
+            timeoutPromise(PROVIDER_CONFIG.claude.timeout, 'Claude')
+        ]);
+
+        return response.data.content[0].text;
+    } catch (err) {
+        console.error("❌ Claude API Error:", err.response?.data?.error?.message || err.message);
         throw err;
     }
 }
@@ -195,12 +334,15 @@ async function callOpenAI(message, systemPrompt, history, options = {}) {
 
     const messages = [
         { role: "system", content: systemPrompt || "You are a helpful assistant." },
-        ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
+        ...history.filter(m => m.role !== 'system').map(h => ({
+            role: h.role === 'user' ? 'user' : 'assistant',
+            content: h.content
+        })),
         { role: "user", content: message }
     ];
 
     const payload = {
-        model: "gpt-4o-mini",
+        model: PROVIDER_CONFIG.openai.model,
         messages: messages,
         max_tokens: 1000,
         temperature: options.temperature !== undefined ? options.temperature : 0.7
@@ -210,25 +352,35 @@ async function callOpenAI(message, systemPrompt, history, options = {}) {
         payload.response_format = options.response_format;
     }
 
-    const res = await axios.post('https://api.openai.com/v1/chat/completions', payload, {
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${OPENAI_API_KEY}`
-        },
-        timeout: 30000
-    });
+    try {
+        const res = await Promise.race([
+            axios.post('https://api.openai.com/v1/chat/completions', payload, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`
+                }
+            }),
+            timeoutPromise(PROVIDER_CONFIG.openai.timeout, 'OpenAI')
+        ]);
 
-    return res.data.choices[0].message.content;
+        return res.data.choices[0].message.content;
+    } catch (err) {
+        console.error("❌ OpenAI API Error:", err.message);
+        throw err;
+    }
 }
 
 async function callDeepSeek(message, systemPrompt, history, options = {}) {
     if (!DEEPSEEK_API_KEY) return null;
 
     const payload = {
-        model: "deepseek-chat",
+        model: PROVIDER_CONFIG.deepseek.model,
         messages: [
             { role: "system", content: systemPrompt || "You are a helpful assistant." },
-            ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
+            ...history.filter(m => m.role !== 'system').map(h => ({
+                role: h.role === 'user' ? 'user' : 'assistant',
+                content: h.content
+            })),
             { role: "user", content: message }
         ],
         temperature: options.temperature !== undefined ? options.temperature : 1.0
@@ -238,17 +390,26 @@ async function callDeepSeek(message, systemPrompt, history, options = {}) {
         payload.response_format = options.response_format;
     }
 
-    const res = await axios.post('https://api.deepseek.com/chat/completions', payload, {
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-        },
-        timeout: 30000
-    });
-    return res.data.choices[0].message.content;
+    try {
+        const res = await Promise.race([
+            axios.post('https://api.deepseek.com/chat/completions', payload, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+                }
+            }),
+            timeoutPromise(PROVIDER_CONFIG.deepseek.timeout, 'DeepSeek')
+        ]);
+
+        return res.data.choices[0].message.content;
+    } catch (err) {
+        console.error("❌ DeepSeek API Error:", err.message);
+        throw err;
+    }
 }
 
-// --- Helper: Format History ---
+// ─── HELPERS ─────────────────────────────────────────────────────────
+
 function formatHistoryForGemini(history) {
     if (!history || !Array.isArray(history)) return [];
 
@@ -268,11 +429,49 @@ function formatHistoryForGemini(history) {
         }
     }
 
+    // Gemini requires first message to be 'user'
     if (formatted.length > 0 && formatted[0].role !== 'user') {
         formatted.shift();
     }
 
     return formatted;
+}
+
+/**
+ * Claude requires messages to alternate user/assistant and start with user.
+ */
+function cleanMessagesForClaude(messages) {
+    if (!messages || messages.length === 0) return [{ role: 'user', content: 'Hello' }];
+
+    const cleaned = [];
+    let lastRole = null;
+
+    for (const msg of messages) {
+        if (msg.role === lastRole) {
+            // Merge consecutive same-role messages
+            cleaned[cleaned.length - 1].content += '\n' + msg.content;
+        } else {
+            cleaned.push({ ...msg });
+            lastRole = msg.role;
+        }
+    }
+
+    // Ensure starts with 'user'
+    if (cleaned.length > 0 && cleaned[0].role !== 'user') {
+        cleaned.unshift({ role: 'user', content: '[Session start]' });
+    }
+
+    return cleaned;
+}
+
+function timeoutPromise(ms, providerName) {
+    return new Promise((_, reject) => {
+        setTimeout(() => reject(new Error(`${providerName} timeout after ${ms}ms`)), ms);
+    });
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
@@ -289,10 +488,21 @@ function cleanTextForTTS(text) {
         .trim();
 }
 
-// --- Audio Generation ---
+// ─── AUDIO (Placeholder — handled in index.js) ──────────────────────
+
 async function generateAudio(text, voiceId = "gemini_standard") {
-    return null; // Logic handled in index.js
+    return null;
 }
 
-module.exports = { generateResponse, routeRequest, generateAudio, PERSONAS, cleanTextForTTS };
+// ─── EXPORT ──────────────────────────────────────────────────────────
 
+module.exports = {
+    generateResponse,
+    routeRequest,
+    generateAudio,
+    PERSONAS,
+    cleanTextForTTS,
+    PROVIDER_CONFIG,
+    PHASE_ROUTING,
+    FALLBACK_CHAIN
+};

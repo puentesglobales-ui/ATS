@@ -741,19 +741,27 @@ app.post('/api/interview/start', async (req, res) => {
   }
 
   try {
-    const userLang = language || 'en';
-    const responseObj = await interviewCoach.getInterviewResponse([], cvText, jobDescription, mode, userLang);
+    const userLang = language || 'es';
+    const responseObj = await interviewCoach.getInterviewResponse([], cvText, jobDescription, mode, userLang, 'B2', userId);
 
     // SAVE TO LOGS (Persistence)
     if (userId && supabaseAdmin) {
-      await supabaseAdmin.from('analysis_logs').insert([{
-        user_id: userId,
-        feature_type: 'interview_start',
-        metadata: { mode, jobDescription: jobDescription.slice(0, 100) }
-      }]);
+      try {
+        await supabaseAdmin.from('analysis_logs').insert([{
+          user_id: userId,
+          feature_type: 'interview_start',
+          metadata: { mode, jobDescription: jobDescription.slice(0, 100), provider: responseObj.provider }
+        }]);
+      } catch (dbErr) { console.warn('Log insert failed:', dbErr.message); }
     }
 
-    res.json({ message: responseObj.dialogue, feedback: responseObj.feedback, stage: responseObj.stage });
+    res.json({
+      message: responseObj.dialogue,
+      feedback: responseObj.feedback,
+      stage: responseObj.stage,
+      emotion_detected: responseObj.emotion_detected,
+      provider: responseObj.provider
+    });
   } catch (error) {
     console.error('Interview Start Error:', error);
     res.status(500).json({ error: 'Failed to start interview' });
@@ -764,14 +772,64 @@ app.post('/api/interview/chat', async (req, res) => {
   const { messages, cvText, jobDescription, mode, userId, language } = req.body;
 
   try {
-    const userLang = language || 'en';
-    const responseObj = await interviewCoach.getInterviewResponse(messages, cvText, jobDescription, mode, userLang);
+    const userLang = language || 'es';
+    const responseObj = await interviewCoach.getInterviewResponse(messages, cvText, jobDescription, mode, userLang, 'B2', userId);
 
-    // Update credits/usage if needed
-    res.json({ message: responseObj.dialogue, feedback: responseObj.feedback, stage: responseObj.stage });
+    // Handle special actions from edge case handler
+    if (responseObj.action === 'GENERATE_FINAL_REPORT') {
+      try {
+        const report = await interviewCoach.generateFinalReport(
+          interviewCoach.getOrCreateSession(userId), cvText, jobDescription, userLang
+        );
+        return res.json({
+          message: responseObj.dialogue,
+          feedback: responseObj.feedback,
+          stage: 'CLOSING',
+          report: report,
+          action: 'SESSION_ENDED'
+        });
+      } catch (reportErr) {
+        console.warn('Report generation failed:', reportErr.message);
+      }
+    }
+
+    if (responseObj.action === 'STOP_SESSION') {
+      return res.json({
+        message: responseObj.dialogue,
+        feedback: null,
+        stage: 'EMERGENCY',
+        action: 'SESSION_STOPPED'
+      });
+    }
+
+    res.json({
+      message: responseObj.dialogue,
+      feedback: responseObj.feedback,
+      stage: responseObj.stage,
+      emotion_detected: responseObj.emotion_detected,
+      provider: responseObj.provider
+    });
   } catch (error) {
     console.error('Interview Chat Error:', error);
     res.status(500).json({ error: 'Failed to chat' });
+  }
+});
+
+// NEW: Generate final report on demand
+app.post('/api/interview/report', async (req, res) => {
+  const { userId, cvText, jobDescription, language } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'Missing userId' });
+  }
+
+  try {
+    const session = interviewCoach.getOrCreateSession(userId);
+    const report = await interviewCoach.generateFinalReport(session, cvText || '', jobDescription || '', language || 'es');
+    res.json({ success: true, report });
+  } catch (error) {
+    console.error('Interview Report Error:', error);
+    res.status(500).json({ error: 'Failed to generate report' });
   }
 });
 
@@ -832,7 +890,7 @@ app.post('/api/psychometric/submit', async (req, res) => {
 
 app.post('/api/interview/speak', upload.single('audio'), async (req, res) => {
   const audioFile = req.file;
-  const { cvText, jobDescription, messages, mode } = req.body;
+  const { cvText, jobDescription, messages, mode, userId, language } = req.body;
 
   let parsedMessages = [];
   try {
@@ -876,9 +934,9 @@ app.post('/api/interview/speak', upload.single('audio'), async (req, res) => {
     // Append user's spoken text to history
     const newHistory = [...parsedMessages, { role: 'user', content: userText }];
 
-    // Get AI response
-    // Get AI response (V2: returns { dialogue, feedback, stage })
-    const responseObj = await interviewCoach.getInterviewResponse(newHistory, cvText, jobDescription, mode);
+    // Get AI response (V2: session-aware + phase routing)
+    const userLang = language || 'es';
+    const responseObj = await interviewCoach.getInterviewResponse(newHistory, cvText, jobDescription, mode, userLang, 'B2', userId);
     const assistantText = cleanTextForTTS(responseObj.dialogue || "Error generating response.");
     const feedback = responseObj.feedback;
     const stage = responseObj.stage;
