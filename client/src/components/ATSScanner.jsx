@@ -260,7 +260,7 @@ const ATSScanner = ({ session }) => {
                                     )}
 
                                     <a
-                                        href="https://wa.me/5491131065715"
+                                        href="https://wa.me/447537130727"
                                         className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-3"
                                     >
                                         <MessageCircle size={14} /> Consultar a Alex Coach (WhatsApp)

@@ -241,7 +241,7 @@ const InterviewSimulator = ({ session }) => {
                         </a>
 
                         <a
-                            href="https://wa.me/5491131065715?text=Hola%20Alex%2C%20acabo%20de%20probar%20el%20simulador%20de%20entrevistas%20y%20me%20interesa%20el%20acceso%20completo"
+                            href="https://wa.me/447537130727?text=Hola%20Alex%2C%20acabo%20de%20probar%20el%20simulador%20de%20entrevistas%20y%20me%20interesa%20el%20acceso%20completo"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="w-full py-5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-3 block"

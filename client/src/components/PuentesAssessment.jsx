@@ -260,7 +260,7 @@ const PuentesAssessment = ({ session }) => {
                                         <h4 className="text-sm font-black text-slate-900 mb-2 uppercase tracking-tighter">Reporte Maestro Bloqueado</h4>
                                         <p className="text-[10px] text-slate-500 mb-4 max-w-[200px] font-medium">Las recomendaciones específicas y el plan de acción están reservados.</p>
                                         <a
-                                            href="https://wa.me/5491131065715"
+                                            href="https://wa.me/447537130727"
                                             className="px-6 py-2 bg-slate-900 text-white text-[10px] font-black rounded-full uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2 shadow-lg shadow-slate-900/20"
                                         >
                                             <MessageCircle size={12} /> Desbloquear con Alex

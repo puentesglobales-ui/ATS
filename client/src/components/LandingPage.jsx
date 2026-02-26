@@ -223,7 +223,7 @@ const LandingPage = () => {
                                         <CheckCircle size={20} className="text-emerald-600" /> <span>Consultas 24/7 vía WhatsApp</span>
                                     </div>
                                 </div>
-                                <a href="https://wa.me/your-number-here" className="inline-flex items-center gap-3 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-[1.5rem] font-black text-lg transition-all shadow-xl shadow-emerald-600/20 group">
+                                <a href="https://wa.me/447537130727?text=Hola%20Alex%2C%20quiero%20mejorar%20mi%20carrera" className="inline-flex items-center gap-3 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-[1.5rem] font-black text-lg transition-all shadow-xl shadow-emerald-600/20 group">
                                     Hablar con Alex ahora <MessageCircle className="group-hover:rotate-12 transition-transform" />
                                 </a>
                             </div>
@@ -314,9 +314,9 @@ const LandingPage = () => {
                         <div>
                             <h4 className="text-slate-900 font-black uppercase text-[10px] tracking-widest mb-6">Conecta</h4>
                             <ul className="space-y-4 text-sm font-bold">
-                                <li><a href="#" className="hover:text-cyan-600">WhatsApp Coach</a></li>
-                                <li><a href="#" className="hover:text-cyan-600">LinkedIn</a></li>
-                                <li><a href="#" className="hover:text-cyan-600">Soporte</a></li>
+                                <li><a href="https://wa.me/447537130727" className="hover:text-cyan-600">WhatsApp Coach</a></li>
+                                <li><a href="https://calendly.com/puentesglobales/agendar" className="hover:text-cyan-600">Agendar Llamada</a></li>
+                                <li><a href="mailto:visasytrabajos@gmail.com" className="hover:text-cyan-600">Soporte</a></li>
                             </ul>
                         </div>
                     </div>
@@ -333,7 +333,7 @@ const LandingPage = () => {
             {/* --- WHATSAPP STICKY (ALEX AI) --- */}
             <div className="fixed bottom-8 right-8 z-[100]">
                 <a
-                    href="https://wa.me/your-number-here"
+                    href="https://wa.me/447537130727?text=Hola%20Alex%2C%20necesito%20ayuda%20con%20mi%20carrera"
                     className="flex items-center gap-4 bg-white border border-slate-200 p-2 pr-6 rounded-full shadow-2xl hover:scale-105 transition-all group"
                 >
                     <div className="w-12 h-12 bg-emerald-600 rounded-full flex items-center justify-center text-white relative">
