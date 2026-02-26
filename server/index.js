@@ -225,7 +225,7 @@ const checkUsage = async (userId, usageType = 'general') => {
       console.log('⚠️ Profile missing. Creating default profile...');
       const { data: newProfile, error: createError } = await supabaseAdmin
         .from('profiles')
-        .insert([{ id: userId, usage_count: 0, is_premium: false, credits_ats: 1, credits_roleplay: 20 }])
+        .insert([{ id: userId, usage_count: 0, is_premium: false, credits_ats: 1, credits_roleplay: 1 }])
         .select()
         .single();
       if (createError) {
@@ -247,10 +247,10 @@ const checkUsage = async (userId, usageType = 'general') => {
 
       if (usageType === 'ats') {
         hasCredit = (profile.credits_ats || 0) > 0;
-        limitMsg = 'Ya has probado nuestras herramientas de CV. Si quieres más, agenda una llamada.';
+        limitMsg = '🎯 ¡Ya probaste nuestro Escáner ATS! Tu análisis fue excelente. Para acceso ilimitado y optimización profesional de tu CV, agenda tu llamada estratégica gratuita en Calendly o habla con Alex por WhatsApp.';
       } else if (usageType === 'roleplay') {
         hasCredit = (profile.credits_roleplay || 0) > 0;
-        limitMsg = 'Ya has probado nuestro simulador de entrevistas. Si quieres más, agenda una llamada.';
+        limitMsg = '🎤 ¡Gran sesión de práctica! Ya completaste tu simulación de entrevista gratis. Para sesiones ilimitadas con feedback avanzado, agenda tu llamada estratégica gratuita en Calendly o habla con Alex por WhatsApp.';
       } else {
         // Fallback or other types checking general usage_count if needed
         hasCredit = true;
@@ -741,6 +741,21 @@ app.post('/api/interview/start', async (req, res) => {
   }
 
   try {
+    // CREDIT CHECK
+    if (userId) {
+      const usageCheck = await checkUsage(userId, 'roleplay');
+      if (!usageCheck.allowed) {
+        return res.status(usageCheck.status || 402).json({
+          error: 'Limit Reached',
+          message: usageCheck.message,
+          cta: {
+            calendly: 'https://calendly.com/puentesglobales/agendar',
+            whatsapp: 'https://wa.me/5491131065715'
+          }
+        });
+      }
+    }
+
     const userLang = language || 'es';
     const responseObj = await interviewCoach.getInterviewResponse([], cvText, jobDescription, mode, userLang, 'B2', userId);
 
@@ -753,6 +768,10 @@ app.post('/api/interview/start', async (req, res) => {
           metadata: { mode, jobDescription: jobDescription.slice(0, 100), provider: responseObj.provider }
         }]);
       } catch (dbErr) { console.warn('Log insert failed:', dbErr.message); }
+
+      // Decrement roleplay credit after successful start
+      supabaseAdmin.rpc('decrement_credit', { p_user_id: userId, p_type: 'roleplay' })
+        .then(({ error }) => { if (error) console.error('Error decrementing roleplay credit:', error); });
     }
 
     res.json({

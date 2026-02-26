@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Mic, MicOff, Volume2, User, Cpu, Award, ArrowRight, Loader2, MessageCircle } from 'lucide-react';
+import { Mic, MicOff, Volume2, User, Cpu, Award, ArrowRight, Loader2, MessageCircle, Calendar, Lock } from 'lucide-react';
 import api from '../services/api';
 import AudioRecorder from './AudioRecorder';
 
@@ -25,6 +25,8 @@ const InterviewSimulator = ({ session }) => {
     const [cvText, setCvText] = useState('');
     const [jobDesc, setJobDesc] = useState('');
     const [currentFeedback, setCurrentFeedback] = useState(null);
+    const [limitReached, setLimitReached] = useState(false);
+    const [limitMessage, setLimitMessage] = useState('');
 
     const messagesEndRef = useRef(null);
 
@@ -69,7 +71,14 @@ const InterviewSimulator = ({ session }) => {
             if (data.feedback) setCurrentFeedback(data.feedback);
         } catch (e) {
             console.error(e);
-            alert("Error al iniciar la simulación.");
+            // Handle 402 — Freemium limit reached
+            if (e.response?.status === 402) {
+                setLimitReached(true);
+                setLimitMessage(e.response?.data?.message || 'Has alcanzado el límite de uso gratuito.');
+                setStarted(false);
+            } else {
+                alert("Error al iniciar la simulación.");
+            }
         } finally {
             setChatProcessing(false);
         }
@@ -185,6 +194,69 @@ const InterviewSimulator = ({ session }) => {
     // Agradecimiento: Llave Maestra no es bloqueada por ATS
     const isMasterKey = session?.user?.email === 'visasytrabajos@gmail.com';
     const isBlocked = !isMasterKey && profileData?.ats_status === 'RECHAZADO';
+
+    // FREEMIUM LIMIT SCREEN
+    if (limitReached && !isMasterKey) {
+        return (
+            <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="max-w-lg w-full text-center space-y-8"
+                >
+                    <div className="w-20 h-20 mx-auto bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                        <Lock size={36} />
+                    </div>
+
+                    <div className="space-y-3">
+                        <h2 className="text-3xl font-black tracking-tight">
+                            ¡Excelente sesión de práctica! 🎉
+                        </h2>
+                        <p className="text-slate-400 text-lg leading-relaxed">
+                            {limitMessage}
+                        </p>
+                    </div>
+
+                    <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 space-y-2">
+                        <p className="text-cyan-400 font-bold text-sm uppercase tracking-wider">
+                            ¿Qué incluye el acceso completo?
+                        </p>
+                        <ul className="text-slate-300 text-sm space-y-1 text-left list-disc list-inside">
+                            <li>Sesiones ilimitadas de simulación</li>
+                            <li>3 modos: Aliado, Técnico y Presión</li>
+                            <li>Feedback con IA avanzada (Claude + Gemini)</li>
+                            <li>Reportes detallados de desempeño</li>
+                            <li>Análisis STAR profesional</li>
+                        </ul>
+                    </div>
+
+                    <div className="space-y-4">
+                        <a
+                            href="https://calendly.com/puentesglobales/agendar"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full py-5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-blue-600/30 flex items-center justify-center gap-3 block"
+                        >
+                            <Calendar size={18} /> Agendar Llamada Estratégica Gratis
+                        </a>
+
+                        <a
+                            href="https://wa.me/5491131065715?text=Hola%20Alex%2C%20acabo%20de%20probar%20el%20simulador%20de%20entrevistas%20y%20me%20interesa%20el%20acceso%20completo"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full py-5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-3 block"
+                        >
+                            <MessageCircle size={18} /> Hablar con Alex por WhatsApp
+                        </a>
+                    </div>
+
+                    <p className="text-slate-600 text-xs">
+                        Tu progreso fue guardado. Un asesor te ayudará a potenciar tu preparación.
+                    </p>
+                </motion.div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-black text-white p-4 font-sans flex flex-col md:flex-row gap-4 overflow-hidden">
