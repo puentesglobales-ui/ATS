@@ -8,7 +8,8 @@ import api from '../services/api';
 import { Navigate } from 'react-router-dom';
 
 const ATSScanner = ({ session }) => {
-    const isMasterKey = session?.user?.email === 'visasytrabajos@gmail.com';
+    const ADMIN_EMAILS = ['visasytrabajos@gmail.com', 'tutrabajoeneuropa@gmail.com'];
+    const isMasterKey = ADMIN_EMAILS.includes(session?.user?.email);
 
     // 1. STRICT GATE: Redirect to Login if no session
     if (!session) {

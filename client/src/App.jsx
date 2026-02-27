@@ -99,7 +99,8 @@ function App() {
     if (!session) return <Navigate to="/login" />;
 
     const { is_student, payment_completed } = session?.user?.user_metadata || {};
-    const isMasterKey = session?.user?.email === 'visasytrabajos@gmail.com';
+    const ADMIN_EMAILS = ['visasytrabajos@gmail.com', 'tutrabajoeneuropa@gmail.com'];
+    const isMasterKey = ADMIN_EMAILS.includes(session?.user?.email);
 
     if (is_student === false && !payment_completed && !isMasterKey) {
       return <Navigate to="/payment-setup" />;

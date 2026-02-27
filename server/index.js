@@ -237,7 +237,7 @@ const checkUsage = async (userId, usageType = 'general') => {
 
     if (profile) {
       // 1. Super Admin / Premium Bypass
-      if (profile.role === 'admin' || profile.email === 'visasytrabajos@gmail.com' || profile.is_premium) {
+      if (profile.role === 'admin' || ['visasytrabajos@gmail.com', 'tutrabajoeneuropa@gmail.com'].includes(profile.email) || profile.is_premium) {
         return { allowed: true };
       }
 
@@ -293,7 +293,7 @@ app.post('/api/profile', async (req, res) => {
     let is_premium = false;
     let subscription_tier = 'free';
 
-    if (email === 'visasytrabajos@gmail.com') {
+    if (['visasytrabajos@gmail.com', 'tutrabajoeneuropa@gmail.com'].includes(email)) {
       role = 'admin';
       is_premium = true;
       subscription_tier = 'premium';

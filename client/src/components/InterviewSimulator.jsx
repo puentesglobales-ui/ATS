@@ -192,7 +192,8 @@ const InterviewSimulator = ({ session }) => {
     }
 
     // Agradecimiento: Llave Maestra no es bloqueada por ATS
-    const isMasterKey = session?.user?.email === 'visasytrabajos@gmail.com';
+    const ADMIN_EMAILS = ['visasytrabajos@gmail.com', 'tutrabajoeneuropa@gmail.com'];
+    const isMasterKey = ADMIN_EMAILS.includes(session?.user?.email);
     const isBlocked = !isMasterKey && profileData?.ats_status === 'RECHAZADO';
 
     // FREEMIUM LIMIT SCREEN

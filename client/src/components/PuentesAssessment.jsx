@@ -4,7 +4,8 @@ import { Target, Loader, CheckCircle2, AlertCircle, TrendingUp, Info, ArrowRight
 import api from '../services/api';
 
 const PuentesAssessment = ({ session }) => {
-    const isMasterKey = session?.user?.email === 'visasytrabajos@gmail.com';
+    const ADMIN_EMAILS = ['visasytrabajos@gmail.com', 'tutrabajoeneuropa@gmail.com'];
+    const isMasterKey = ADMIN_EMAILS.includes(session?.user?.email);
     const [stage, setStage] = useState('INIT'); // INIT, TESTING, LOADING, REPORT
     const [cvText, setCvText] = useState('');
     const [jobTitle, setJobTitle] = useState('');
