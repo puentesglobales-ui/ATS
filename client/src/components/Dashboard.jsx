@@ -48,6 +48,18 @@ const Dashboard = ({ session }) => {
             hoverBg: "group-hover:bg-emerald-600",
             hoverIcon: "group-hover:text-white",
             hoverText: "group-hover:text-emerald-400"
+        },
+        {
+            title: "TalkMe - Idiomas IA",
+            desc: "Prepárate en idiomas para entrevistas internacionales conversando con ALEX.",
+            icon: <Sparkles className="w-8 h-8" />,
+            link: "https://mvp-idiomas-ai.vercel.app/",
+            isExternal: true,
+            color: "fuchsia",
+            bgColor: "bg-fuchsia-900/30",
+            hoverBg: "group-hover:bg-fuchsia-600",
+            hoverIcon: "group-hover:text-white",
+            hoverText: "group-hover:text-fuchsia-400"
         }
     ];
 
@@ -66,35 +78,40 @@ const Dashboard = ({ session }) => {
                 </p>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl">
-                {tools.map((tool, idx) => (
-                    <Link to={tool.link} key={idx} className="group">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.1 }}
-                            whileHover={{ scale: 1.02 }}
-                            className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 h-full flex flex-col justify-between hover:border-slate-700 hover:shadow-2xl hover:shadow-cyan-900/10 transition-all"
-                        >
-                            <div>
-                                <div className={`w-16 h-16 ${tool.bgColor} rounded-2xl flex items-center justify-center mb-6 ${tool.hoverBg} transition-all duration-300`}>
-                                    <div className={`text-${tool.color}-400 ${tool.hoverIcon} transition-colors`}>
-                                        {tool.icon}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl">
+                {tools.map((tool, idx) => {
+                    const Wrapper = tool.isExternal ? 'a' : Link;
+                    const props = tool.isExternal ? { href: tool.link, target: "_blank", rel: "noopener noreferrer" } : { to: tool.link };
+
+                    return (
+                        <Wrapper {...props} key={idx} className="group">
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: idx * 0.1 }}
+                                whileHover={{ scale: 1.02 }}
+                                className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 h-full flex flex-col justify-between hover:border-slate-700 hover:shadow-2xl hover:shadow-cyan-900/10 transition-all"
+                            >
+                                <div>
+                                    <div className={`w-16 h-16 ${tool.bgColor} rounded-2xl flex items-center justify-center mb-6 ${tool.hoverBg} transition-all duration-300`}>
+                                        <div className={`text-${tool.color}-400 ${tool.hoverIcon} transition-colors`}>
+                                            {tool.icon}
+                                        </div>
                                     </div>
+                                    <h2 className={`text-2xl font-black text-white mb-3 ${tool.hoverText} transition-colors uppercase tracking-tight`}>
+                                        {tool.title}
+                                    </h2>
+                                    <p className="text-slate-400 leading-relaxed font-medium">
+                                        {tool.desc}
+                                    </p>
                                 </div>
-                                <h2 className={`text-2xl font-black text-white mb-3 ${tool.hoverText} transition-colors uppercase tracking-tight`}>
-                                    {tool.title}
-                                </h2>
-                                <p className="text-slate-400 leading-relaxed font-medium">
-                                    {tool.desc}
-                                </p>
-                            </div>
-                            <div className="mt-8 flex items-center font-black text-sm uppercase tracking-widest text-slate-500 group-hover:text-white group-hover:translate-x-2 transition-all">
-                                ACCEDER AHORA <ArrowRight className="ml-2 w-4 h-4" />
-                            </div>
-                        </motion.div>
-                    </Link>
-                ))}
+                                <div className="mt-8 flex items-center font-black text-sm uppercase tracking-widest text-slate-500 group-hover:text-white group-hover:translate-x-2 transition-all">
+                                    ACCEDER AHORA <ArrowRight className="ml-2 w-4 h-4" />
+                                </div>
+                            </motion.div>
+                        </Wrapper>
+                    );
+                })}
             </div>
 
             <div className="mt-16 text-center">

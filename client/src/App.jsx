@@ -144,7 +144,7 @@ function App() {
           } />
 
           <Route path="/admin" element={<ProtectedRoute><AdminDashboard session={session} /></ProtectedRoute>} />
-          <Route path="/payment-setup" element={<ProtectedRoute><PaymentSetup session={session} /></ProtectedRoute>} />
+          <Route path="/payment-setup" element={session ? <PaymentSetup session={session} /> : <Navigate to="/login" />} />
 
           <Route path="/" element={<LandingPage />} />
         </Routes>
