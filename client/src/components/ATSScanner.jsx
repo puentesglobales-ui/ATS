@@ -71,8 +71,15 @@ const ATSScanner = ({ session }) => {
             setResult(response.data);
 
         } catch (err) {
-            console.error(err);
-            setError('Failed to analyze CV. Please try again.');
+            console.error('ATS Error:', err);
+            // Extract the real error message from the backend
+            const serverMsg = err.response?.data?.message || err.response?.data?.error;
+            if (err.response?.status === 402) {
+                // Credit limit reached - show the backend's message
+                setError(serverMsg || '🎯 Has alcanzado el límite de uso gratuito. Agenda tu llamada estratégica para acceso ilimitado.');
+            } else {
+                setError(serverMsg || 'Error al analizar el CV. Intenta de nuevo.');
+            }
         } finally {
             setAnalyzing(false);
         }
