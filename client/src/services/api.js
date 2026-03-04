@@ -16,9 +16,9 @@ const getBaseUrl = () => {
 const api = axios.create({
     baseURL: getBaseUrl(),
     timeout: 60000, // Increased to 60s for AI generation tasks
-    headers: {
-        'Content-Type': 'application/json',
-    },
+    // NOTE: Do NOT set default Content-Type here.
+    // FormData (used by ATS Scanner PDF upload) needs multipart/form-data
+    // which Axios sets automatically when the body is a FormData instance.
 });
 
 // Interceptor for Debugging

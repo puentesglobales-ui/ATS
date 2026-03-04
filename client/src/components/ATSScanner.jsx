@@ -11,11 +11,7 @@ const ATSScanner = ({ session }) => {
     const ADMIN_EMAILS = ['visasytrabajos@gmail.com', 'tutrabajoeneuropa@gmail.com'];
     const isMasterKey = ADMIN_EMAILS.includes(session?.user?.email);
 
-    // 1. STRICT GATE: Redirect to Login if no session
-    if (!session) {
-        return <Navigate to="/login" />;
-    }
-
+    // ALL HOOKS MUST BE DECLARED BEFORE ANY CONDITIONAL RETURN
     const [file, setFile] = useState(null);
     const [cvText, setCvText] = useState(() => localStorage.getItem('ats_cv_text') || '');
     const [inputMode, setInputMode] = useState(() => localStorage.getItem('ats_input_mode') || 'text');
@@ -36,6 +32,11 @@ const ATSScanner = ({ session }) => {
             localStorage.setItem('ats_last_result', JSON.stringify(result));
         }
     }, [cvText, inputMode, jobDescription, result]);
+
+    // STRICT GATE: Redirect to Login if no session (AFTER hooks)
+    if (!session) {
+        return <Navigate to="/login" />;
+    }
 
     const handleFileChange = (e) => {
         if (e.target.files[0]) setFile(e.target.files[0]);
