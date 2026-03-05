@@ -37,7 +37,7 @@ if (!OPENAI_API_KEY) console.warn("⚠️ WARNING: OPENAI_API_KEY is missing. Op
 // ─── PROVIDER CONFIG ─────────────────────────────────────────────────
 
 const PROVIDER_CONFIG = {
-    gemini: { timeout: 15000, retries: 1, cost_tier: 'FREE', model: 'gemini-1.5-flash' },
+    gemini: { timeout: 15000, retries: 1, cost_tier: 'FREE', model: 'gemini-2.5-flash' },
     claude: { timeout: 20000, retries: 1, cost_tier: 'MEDIUM', model: 'claude-3-5-sonnet-20241022' },
     deepseek: { timeout: 15000, retries: 0, cost_tier: 'LOW', model: 'deepseek-chat' },
     openai: { timeout: 20000, retries: 0, cost_tier: 'PAID', model: 'gpt-4o-mini' }

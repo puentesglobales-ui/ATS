@@ -8,7 +8,7 @@ class PuentesGlobalesEngine {
     constructor() {
         const genAI = new GoogleGenerativeAI(GENAI_API_KEY);
         this.model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
+            model: "gemini-2.5-flash",
             generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
         });
     }

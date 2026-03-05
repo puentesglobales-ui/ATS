@@ -28,7 +28,7 @@ const STRATEGIC_MODELS = {
     ARCHITECT: { provider: 'OPENAI', model: 'gpt-o3-mini', role: 'Decision Maker' }, // "GPT-5" Level Reasoning
     CODER: { provider: 'ANTHROPIC', model: 'claude-3-5-sonnet-20240620', role: 'Senior Dev' }, // Best coding model
     LOGIC: { provider: 'DEEPSEEK', model: 'deepseek-chat', role: 'Algorithm Expert' }, // Cost/Performance King
-    INTERFACE: { provider: 'GOOGLE', model: 'gemini-1.5-flash', role: 'Fast Interface' } // Gabriel's Voice
+    INTERFACE: { provider: 'GOOGLE', model: 'gemini-2.5-flash', role: 'Fast Interface' } // Gabriel's Voice
 };
 
 class ProgrammingRouter {
